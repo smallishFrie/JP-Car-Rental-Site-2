@@ -1,146 +1,94 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { useEffect, useState } from "react";
-import type { User } from "@supabase/supabase-js";
-import { motionSprings } from "@/lib/motion";
-import { MotionPressableLink } from "./MotionPressable";
-import { scrollToAvailableCarsHeader } from "@/lib/scrollToAvailableCars";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
-import { createClient } from "@/lib/supabase/client";
+import { useHeroMotion } from "./hero-motion-context";
 
-function scrollToCars(event: React.MouseEvent<HTMLAnchorElement>) {
+const premiumEase: [number, number, number, number] = [0.76, 0, 0.24, 1];
+
+function splitWords(text: string) {
+  return text.split(/\s+/).filter(Boolean);
+}
+
+function scrollToFleet(event: React.MouseEvent<HTMLAnchorElement>) {
   event.preventDefault();
-  scrollToAvailableCarsHeader();
-}
-
-const heroContainer = {
-  hidden: {},
-  visible: {
-    transition: {
-      staggerChildren: 0.06,
-      delayChildren: 0.05,
-    },
-  },
-};
-
-function lineItem(reduce: boolean | null) {
-  if (reduce) {
-    return { hidden: { opacity: 1, y: 0, filter: "blur(0px)" }, visible: { opacity: 1, y: 0, filter: "blur(0px)" } };
-  }
-  return {
-    hidden: { opacity: 0, y: 14, filter: "blur(8px)" },
-    visible: {
-      opacity: 1,
-      y: 0,
-      filter: "blur(0px)",
-      transition: motionSprings.grand,
-    },
-  };
-}
-
-function wordItem(reduce: boolean | null) {
-  if (reduce) {
-    return { hidden: { opacity: 1, y: 0, filter: "blur(0px)" }, visible: { opacity: 1, y: 0, filter: "blur(0px)" } };
-  }
-  return {
-    hidden: { opacity: 0, y: "0.4em", filter: "blur(6px)" },
-    visible: {
-      opacity: 1,
-      y: 0,
-      filter: "blur(0px)",
-      transition: motionSprings.grand,
-    },
-  };
-}
-
-function SplitWords({ text, reduce }: { text: string; reduce: boolean | null }) {
-  const words = text.split(/\s+/).filter(Boolean);
-  const wv = wordItem(reduce);
-  return (
-    <>
-      {words.map((w, i) => (
-        <motion.span
-          key={`${i}-${w}`}
-          variants={wv}
-          style={{ display: "inline-block", marginRight: "0.22em" }}
-        >
-          {w}
-        </motion.span>
-      ))}
-    </>
-  );
+  const section = document.getElementById("cars");
+  section?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 export default function HeroCopy() {
-  const reduce = useReducedMotion();
-  const lv = lineItem(reduce);
-  const [user, setUser] = useState<User | null | undefined>(() => (hasSupabaseEnv() ? undefined : null));
-
-  useEffect(() => {
-    if (!hasSupabaseEnv()) return;
-
-    const supabase = createClient();
-    void supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const showSignInCta = !hasSupabaseEnv() || user === null;
+  const reduceMotion = useReducedMotion();
+  const heroMotion = useHeroMotion();
+  const words = splitWords("JP Car Rental");
 
   return (
-    <motion.div className="hero-copy">
-      <motion.div className="hero-copy-inner" variants={heroContainer} initial="hidden" animate="visible">
-        <motion.span className="hero-eyebrow" variants={lv}>
-          JP Car Rental
+    <motion.div className="hero-copy" style={heroMotion ? { y: heroMotion.textY } : undefined}>
+      <div className="hero-copy-inner">
+        <motion.span
+          className="hero-kicker"
+          initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+          animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: premiumEase }}
+        >
+          Editorial-grade automotive rental
         </motion.span>
 
-        <motion.h2
-          className="hero-title"
-          variants={{
-            hidden: {},
-            visible: { transition: { staggerChildren: 0.07, delayChildren: 0.06 } },
-          }}
-        >
-          <SplitWords text="Reserve smarter. Drive sooner." reduce={reduce} />
-        </motion.h2>
+        <h1 className="hero-title" aria-label="JP Car Rental">
+          {words.map((word, index) => (
+            <motion.span
+              key={word}
+              style={{ display: "inline-block", marginRight: "0.22em", overflow: "hidden" }}
+              initial={
+                reduceMotion
+                  ? false
+                  : {
+                      opacity: 0,
+                      y: "0.78em",
+                      clipPath: "inset(100% 0% 0% 0%)",
+                    }
+              }
+              animate={
+                reduceMotion
+                  ? undefined
+                  : {
+                      opacity: 1,
+                      y: "0em",
+                      clipPath: "inset(0% 0% 0% 0%)",
+                    }
+              }
+              transition={{
+                duration: 0.86,
+                ease: premiumEase,
+                delay: reduceMotion ? 0 : 0.12 + index * 0.09,
+              }}
+            >
+              {word}
+            </motion.span>
+          ))}
+        </h1>
 
-        <motion.div className="hero-sublines" variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.1, delayChildren: 0.12 } } }}>
-          <motion.p className="hero-subline" variants={lv}>
-            Compare available cars, see clear daily rates, and pick what fits your trip.
-          </motion.p>
-          <motion.p className="hero-subline" variants={lv}>
-            Confirm your dates, complete secure checkout, and manage bookings from one account.
-          </motion.p>
-        </motion.div>
+        <motion.p
+          className="hero-subline"
+          initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+          animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: premiumEase, delay: reduceMotion ? 0 : 0.5 }}
+        >
+          Clean machines, precise pricing, and a booking flow designed with premium restraint.
+        </motion.p>
 
         <motion.div
           className="hero-ctas"
-          variants={{
-            hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : 10 },
-            visible: {
-              opacity: 1,
-              y: 0,
-              transition: reduce ? { duration: 0 } : motionSprings.grand,
-            },
-          }}
+          initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+          animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.74, ease: premiumEase, delay: reduceMotion ? 0 : 0.62 }}
         >
-          <MotionPressableLink href="#cars" className="learn-more-box" onClick={scrollToCars}>
-            Explore fleet
-          </MotionPressableLink>
-          {showSignInCta ? (
-            <MotionPressableLink href="/auth/sign-in" className="hero-cta-secondary">
-              Sign in
-            </MotionPressableLink>
-          ) : null}
+          <a href="#cars" onClick={scrollToFleet} className="hero-cta-main">
+            Book now
+          </a>
+          <a href="/auth/sign-in" className="hero-cta-ghost">
+            Sign in
+          </a>
         </motion.div>
-      </motion.div>
+      </div>
     </motion.div>
   );
 }

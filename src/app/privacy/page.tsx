@@ -1,24 +1,12 @@
 import Link from "next/link";
-import RevealOnScroll from "@/app/components/RevealOnScroll";
 
-export default function PrivacyPolicyPage() {
+export default function PrivacyPage() {
   return (
-    <main className="legal-page privacy-policy-page">
-      <div className="legal-page-inner privacy-policy-inner">
-        <RevealOnScroll>
-          <section className="privacy-policy-hero">
-            <p className="privacy-policy-kicker">JP Car Rental</p>
-            <h1 className="page-intro-fade">Privacy Policy</h1>
-            <p className="legal-meta">Last Updated: May 6, 2026</p>
-            <p className="privacy-policy-summary">
-              Your trust matters to us. This page explains what information we collect, how we use it, and how we
-              protect it when you book and manage rentals with JP Car Rental.
-            </p>
-          </section>
-        </RevealOnScroll>
-
-        <RevealOnScroll>
-        <section className="privacy-policy-card">
+    <main className="legal-page">
+      <div className="legal-page-inner">
+        <h1>Privacy Policy</h1>
+        <p className="legal-meta">Last Updated: May 6, 2026</p>
+        <section>
           <h2>1. Introduction</h2>
           <p>
             JP Car Rental (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) is committed to protecting your privacy. This Privacy Policy explains how
@@ -28,7 +16,7 @@ export default function PrivacyPolicyPage() {
           </p>
         </section>
 
-        <section className="privacy-policy-card">
+        <section>
           <h2>2. Information We Collect</h2>
           <p>We collect personal information that you voluntarily provide to us when booking a car, including:</p>
           <ul>
@@ -47,7 +35,7 @@ export default function PrivacyPolicyPage() {
           </ul>
         </section>
 
-        <section className="privacy-policy-card">
+        <section>
           <h2>3. How We Use Your Information</h2>
           <p>We use the collected information for the following purposes:</p>
           <ul>
@@ -58,10 +46,8 @@ export default function PrivacyPolicyPage() {
             <li>To comply with legal obligations and protect our rights.</li>
           </ul>
         </section>
-        </RevealOnScroll>
 
-        <RevealOnScroll>
-        <section className="privacy-policy-card">
+        <section>
           <h2>4. Data Sharing and Disclosure</h2>
           <p>
             We do not sell your personal information. We may share your data with third-party service providers (such as
@@ -70,7 +56,7 @@ export default function PrivacyPolicyPage() {
           </p>
         </section>
 
-        <section className="privacy-policy-card">
+        <section>
           <h2>5. Your Rights</h2>
           <p>Under the Data Privacy Act, you have the right to:</p>
           <ul>
@@ -82,7 +68,7 @@ export default function PrivacyPolicyPage() {
           </ul>
         </section>
 
-        <section className="privacy-policy-card">
+        <section>
           <h2>6. Contact Us</h2>
           <p>
             If you have any questions or concerns about this Privacy Policy or our data practices, please contact us at:
@@ -90,23 +76,17 @@ export default function PrivacyPolicyPage() {
             Email: privacy@jpcarrental.com
           </p>
         </section>
-        </RevealOnScroll>
 
-        <RevealOnScroll>
-        <section className="privacy-policy-placeholder" aria-label="Placeholder policy notice">
+        <section aria-label="Placeholder policy notice">
           <h2>Important Notice</h2>
-          <p>
-            This privacy policy is a temporary placeholder for demo and development purposes.
-          </p>
+          <p>This privacy policy is a temporary placeholder for demo and development purposes.</p>
           <p>
             It is <strong>not the final legal policy</strong> and will be replaced with an officially reviewed version.
           </p>
         </section>
-
         <div className="legal-page-footer">
           <Link href="/">&larr; Back to Home</Link>
         </div>
-        </RevealOnScroll>
       </div>
     </main>
   );

@@ -2,183 +2,14 @@ import "server-only";
 
 import { readServerEnv } from "@/lib/env";
 
-type XenditInvoiceResponse = {
-  id?: string;
-  invoice_url?: string;
-  status?: string;
-  message?: string;
-};
-
-type XenditPaymentRequestResponse = {
-  payment_request_id?: string;
-  status?: string;
-  actions?: Array<{ type?: string; value?: string }>;
-  message?: string;
-};
-
-type XenditRefundResponse = {
-  id?: string;
-  status?: string;
-  message?: string;
-};
-
-type XenditPaymentSessionResponse = {
+type XenditSessionResponse = {
   payment_session_id?: string;
-  status?: string;
   components_sdk_key?: string;
   message?: string;
 };
 
 function xenditAuthHeader(secretKey: string) {
   return `Basic ${Buffer.from(`${secretKey}:`).toString("base64")}`;
-}
-
-export async function createXenditInvoice(input: {
-  bookingId: string;
-  carName: string;
-  amountPhp: number;
-  customerEmail?: string;
-  customerName: string;
-  successUrl: string;
-  cancelUrl: string;
-}) {
-  const secretKey = readServerEnv("XENDIT_SECRET_KEY");
-  const response = await fetch("https://api.xendit.co/v2/invoices", {
-    method: "POST",
-    headers: {
-      Authorization: xenditAuthHeader(secretKey),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      external_id: input.bookingId,
-      amount: Number(input.amountPhp.toFixed(2)),
-      currency: "PHP",
-      description: `Booking for ${input.carName}`,
-      payer_email: input.customerEmail || undefined,
-      customer: {
-        given_names: input.customerName,
-        email: input.customerEmail || undefined,
-      },
-      success_redirect_url: input.successUrl,
-      failure_redirect_url: input.cancelUrl,
-    }),
-  });
-
-  const payload = (await response.json()) as XenditInvoiceResponse;
-  if (!response.ok || !payload.id || !payload.invoice_url) {
-    throw new Error(payload.message || "Failed to create Xendit invoice.");
-  }
-
-  return {
-    invoiceId: payload.id,
-    checkoutUrl: payload.invoice_url,
-  };
-}
-
-export async function createXenditPaymentRequest(input: {
-  bookingId: string;
-  amountPhp: number;
-  channelCode: string;
-  customerName: string;
-  customerEmail?: string;
-  customerPhone?: string;
-  customerReferenceId: string;
-  successUrl: string;
-  failureUrl: string;
-}) {
-  const secretKey = readServerEnv("XENDIT_SECRET_KEY");
-  const response = await fetch("https://api.xendit.co/v3/payment_requests", {
-    method: "POST",
-    headers: {
-      Authorization: xenditAuthHeader(secretKey),
-      "Content-Type": "application/json",
-      "api-version": "2024-11-11",
-    },
-    body: JSON.stringify({
-      reference_id: input.bookingId,
-      type: "PAY",
-      country: "PH",
-      currency: "PHP",
-      request_amount: Number(input.amountPhp.toFixed(2)),
-      capture_method: "AUTOMATIC",
-      channel_code: input.channelCode,
-      channel_properties: {
-        success_return_url: input.successUrl,
-        failure_return_url: input.failureUrl,
-      },
-      customer: {
-        reference_id: input.customerReferenceId,
-        type: "INDIVIDUAL",
-        individual_detail: {
-          given_names: input.customerName,
-        },
-        email: input.customerEmail || undefined,
-        mobile_number: input.customerPhone || undefined,
-      },
-      description: `JP Car Rental booking ${input.bookingId}`,
-      metadata: {
-        booking_id: input.bookingId,
-      },
-    }),
-  });
-
-  const payload = (await response.json()) as XenditPaymentRequestResponse;
-  if (!response.ok || !payload.payment_request_id) {
-    throw new Error(payload.message || "Failed to create payment request.");
-  }
-
-  const actionUrl =
-    payload.actions?.find((action) => action.type === "REDIRECT_CUSTOMER")?.value ??
-    payload.actions?.find((action) => action.value)?.value ??
-    undefined;
-
-  return {
-    paymentRequestId: payload.payment_request_id,
-    actionUrl,
-    raw: payload as unknown as Record<string, unknown>,
-  };
-}
-
-export async function createXenditRefund(input: {
-  bookingId: string;
-  amountPhp: number;
-  currency?: string;
-  paymentReference: string;
-  paymentReferenceKind: "payment_request" | "invoice" | "payment_id";
-  reason?: string;
-}) {
-  const secretKey = readServerEnv("XENDIT_SECRET_KEY");
-  const idField =
-    input.paymentReferenceKind === "payment_request"
-      ? { payment_request_id: input.paymentReference }
-      : input.paymentReferenceKind === "invoice"
-        ? { invoice_id: input.paymentReference }
-        : { payment_id: input.paymentReference };
-  const response = await fetch("https://api.xendit.co/refunds", {
-    method: "POST",
-    headers: {
-      Authorization: xenditAuthHeader(secretKey),
-      "Content-Type": "application/json",
-      "Idempotency-Key": `refund-${input.bookingId}`,
-    },
-    body: JSON.stringify({
-      reference_id: input.bookingId,
-      amount: Number(input.amountPhp.toFixed(2)),
-      currency: input.currency ?? "PHP",
-      reason: input.reason ?? "CANCELLATION",
-      ...idField,
-      metadata: {
-        booking_id: input.bookingId,
-      },
-    }),
-  });
-
-  const payload = (await response.json()) as XenditRefundResponse;
-  if (!response.ok || !payload.id) {
-    throw new Error(payload.message || "Failed to create refund.");
-  }
-
-  return payload as unknown as Record<string, unknown>;
 }
 
 export async function createXenditComponentsPaymentSession(input: {
@@ -190,7 +21,8 @@ export async function createXenditComponentsPaymentSession(input: {
   origins: string[];
 }) {
   const secretKey = readServerEnv("XENDIT_SECRET_KEY");
-  const uniqueCustomerReferenceId = `cust-${crypto.randomUUID()}`;
+  const customerRef = `cust-${crypto.randomUUID()}`;
+
   const response = await fetch("https://api.xendit.co/sessions", {
     method: "POST",
     headers: {
@@ -205,13 +37,11 @@ export async function createXenditComponentsPaymentSession(input: {
       currency: "PHP",
       country: "PH",
       customer: {
-        reference_id: uniqueCustomerReferenceId,
+        reference_id: customerRef,
         type: "INDIVIDUAL",
         email: input.customerEmail || undefined,
         mobile_number: input.customerPhone || undefined,
-        individual_detail: {
-          given_names: input.customerName,
-        },
+        individual_detail: { given_names: input.customerName },
       },
       components_configuration: {
         origins: input.origins,
@@ -219,7 +49,7 @@ export async function createXenditComponentsPaymentSession(input: {
     }),
   });
 
-  const payload = (await response.json()) as XenditPaymentSessionResponse;
+  const payload = (await response.json()) as XenditSessionResponse;
   if (!response.ok || !payload.payment_session_id || !payload.components_sdk_key) {
     throw new Error(payload.message || "Failed to create payment session.");
   }

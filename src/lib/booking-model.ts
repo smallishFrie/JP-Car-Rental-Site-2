@@ -1,9 +1,6 @@
-/** Pure booking types and helpers — safe to import from Client Components (no Supabase / next/headers). */
-
 export const bookingStatuses = ["pending", "upcoming", "active", "completed", "cancel_requested", "canceled"] as const;
 export type BookingStatus = (typeof bookingStatuses)[number];
 
-/** Bookings in these states still need the car row; car delete is blocked until resolved. */
 export const BOOKING_STATUSES_BLOCKING_CAR_DELETE = ["pending", "upcoming", "active", "cancel_requested"] as const;
 
 export function bookingStatusBlocksCarDelete(status: BookingStatus): boolean {
@@ -17,7 +14,6 @@ export type BookingRecord = {
   id: string;
   user_id: string;
   car_id: string | null;
-  /** Snapshot of car name at booking time; shown after car is deleted (car_id null). */
   car_display_name?: string | null;
   start_date: string;
   end_date: string;
@@ -40,7 +36,6 @@ export type BookingRecord = {
   paid_at: string | null;
   created_at: string;
   updated_at: string;
-  dispute_reported_at?: string | null;
 };
 
 export function formatBookingVehicleName(
@@ -73,7 +68,6 @@ export function computeDerivedStatus(input: {
   if (input.currentStatus === "canceled" || input.currentStatus === "cancel_requested") {
     return input.currentStatus;
   }
-
   if (input.paymentStatus !== "paid") {
     return "pending";
   }
@@ -83,11 +77,7 @@ export function computeDerivedStatus(input: {
   const start = toDateOnly(input.startDate);
   const end = toDateOnly(input.endDate);
 
-  if (today < start) {
-    return "upcoming";
-  }
-  if (today > end) {
-    return "completed";
-  }
+  if (today < start) return "upcoming";
+  if (today > end) return "completed";
   return "active";
 }

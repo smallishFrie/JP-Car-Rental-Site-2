@@ -4,9 +4,22 @@ import { motion } from "framer-motion";
 import { useHeroMotion } from "./hero-motion-context";
 
 export default function HeroParallaxBg() {
-  const ctx = useHeroMotion();
-  if (!ctx) {
-    return <div className="hero-image-parallax-fill" aria-hidden />;
-  }
-  return <motion.div className="hero-image-parallax-fill" style={{ y: ctx.bgY, scale: ctx.bgScale }} aria-hidden />;
+  const heroMotion = useHeroMotion();
+
+  return (
+    <div className="hero-stage" aria-hidden="true">
+      <motion.div
+        className="hero-stage-image"
+        style={
+          heroMotion
+            ? {
+                y: heroMotion.stageY,
+                scale: heroMotion.stageScale,
+              }
+            : undefined
+        }
+      />
+      <div className="hero-grid-overlay" />
+    </div>
+  );
 }

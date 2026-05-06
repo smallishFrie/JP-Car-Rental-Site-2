@@ -1,17 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { signInWithEmail } from "@/app/auth/actions";
-import AuthShellMotion from "@/app/components/AuthShellMotion";
-import PasswordInput from "@/app/components/PasswordInput";
-import { MotionPressableButton } from "@/app/components/MotionPressable";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
+import AuthFormCard from "@/app/components/AuthFormCard";
 import { createClient } from "@/lib/supabase/server";
+import { hasSupabaseEnv } from "@/lib/supabase/env";
 
 type SignInPageProps = {
-  searchParams: Promise<{
-    message?: string;
-    returnTo?: string;
-  }>;
+  searchParams: Promise<{ message?: string; returnTo?: string }>;
 };
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
@@ -23,46 +16,12 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-
-    if (user) {
-      redirect(safeReturnTo);
-    }
+    if (user) redirect(safeReturnTo);
   }
 
   return (
-    <main className="auth-main auth-main--no-site-header">
-      <section className="auth-shell">
-        <AuthShellMotion>
-          <header className="auth-header">
-            <h1>Welcome back</h1>
-            <p>Sign in to view trips, payments, and booking updates.</p>
-          </header>
-
-          {message ? <p className="auth-message">{message}</p> : null}
-
-          <form action={signInWithEmail} className="auth-form">
-            <input type="hidden" name="returnPath" value="/auth/sign-in" />
-            <input type="hidden" name="redirectTo" value={safeReturnTo} />
-            <h2>Sign in</h2>
-            <label>
-              Email
-              <input type="email" name="email" required />
-            </label>
-            <PasswordInput label="Password" name="password" required minLength={6} autoComplete="current-password" />
-            <MotionPressableButton type="submit" className="auth-primary">
-              Sign in
-            </MotionPressableButton>
-          </form>
-
-          <p className="auth-back-link">
-            <Link href="/">← Back to home</Link>
-          </p>
-          <p className="auth-back-link">
-            New here?{" "}
-            <Link href={`/auth/create-account?returnTo=${encodeURIComponent(safeReturnTo)}`}>→ Create an account</Link>
-          </p>
-        </AuthShellMotion>
-      </section>
-    </main>
+    <section className="auth-route-shell">
+      <AuthFormCard mode="sign-in" message={message} safeReturnTo={safeReturnTo} />
+    </section>
   );
 }

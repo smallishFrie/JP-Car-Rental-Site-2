@@ -1,121 +1,92 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { motionSprings } from "@/lib/motion";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 
-export type CustomSelectOption = { value: string; label: React.ReactNode };
+export type CustomSelectOption = {
+  value: string;
+  label: ReactNode;
+};
 
 type CustomSelectProps = {
   options: CustomSelectOption[];
   value: string;
   onChange: (value: string) => void;
-  /** Shown on the closed trigger when no matching option label is found */
-  placeholder?: string;
-  /** Accessible name for the listbox panel */
   optionsAriaLabel: string;
-  /** id for the trigger (e.g. to pair with <label htmlFor>) */
-  id?: string;
+  placeholder?: string;
   className?: string;
+  triggerClassName?: string;
 };
 
 export default function CustomSelect({
   options,
   value,
   onChange,
-  placeholder = "Select option",
   optionsAriaLabel,
-  id,
+  placeholder = "Select",
   className,
+  triggerClassName,
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const fieldRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const reduceMotion = useReducedMotion();
   const uid = useId();
-  const listId = `${uid}-list`;
-  const triggerId = id ?? `${uid}-trigger`;
-  const reduce = useReducedMotion();
+  const listId = `${uid}-options`;
 
   const selectedLabel = useMemo(() => {
-    const match = options.find((o) => o.value === value);
-    return match?.label ?? placeholder;
-  }, [options, value, placeholder]);
+    const selected = options.find((option) => option.value === value);
+    return selected?.label ?? placeholder;
+  }, [options, placeholder, value]);
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const handlePointerDown = (event: PointerEvent) => {
-      const field = containerRef.current;
-      if (field && !field.contains(event.target as Node)) {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!fieldRef.current?.contains(event.target as Node)) {
         setOpen(false);
       }
     };
-    const handleKeyDown = (event: KeyboardEvent) => {
+    const onEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
         triggerRef.current?.focus();
       }
-      if (event.key === "Tab") {
-        setOpen(false);
-      }
     };
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onEscape);
     return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onEscape);
     };
   }, [open]);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const selected = containerRef.current?.querySelector<HTMLButtonElement>(
-      ".custom-select-option[aria-selected='true']",
-    );
-    window.requestAnimationFrame(() => {
-      selected?.focus();
-    });
-  }, [open]);
-
-  const panelTransition = reduce ? { duration: 0 } : motionSprings.snappy;
 
   return (
-    <div className={`custom-select-field${className ? ` ${className}` : ""}`} ref={containerRef}>
+    <div className={`custom-select-field${className ? ` ${className}` : ""}`} ref={fieldRef}>
       <button
         type="button"
-        id={triggerId}
         ref={triggerRef}
-        className="booking-date-trigger"
+        className={`custom-select-trigger${triggerClassName ? ` ${triggerClassName}` : ""}`}
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-controls={open ? listId : undefined}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setOpen((current) => !current)}
       >
         <span>{selectedLabel}</span>
-        <span
-          className={`booking-date-trigger-chevron${open ? " booking-date-trigger-chevron-open" : ""}`}
-          aria-hidden
-        >
-          v
+        <span className={`custom-select-chevron${open ? " custom-select-chevron-open" : ""}`} aria-hidden>
+          ▾
         </span>
       </button>
       <AnimatePresence>
         {open ? (
           <motion.div
-            layout
-            key="custom-select-panel"
-            className="custom-select-dropdown popover-motion-layer"
+            className="custom-select-dropdown"
             id={listId}
             role="listbox"
             aria-label={optionsAriaLabel}
-            aria-hidden={false}
-            initial={{ opacity: 0, y: -8, scale: 0.98, visibility: "hidden" }}
-            animate={{ opacity: 1, y: 0, scale: 1, visibility: "visible" }}
-            exit={{ opacity: 0, y: -6, scale: 0.98, visibility: "hidden" }}
-            transition={panelTransition}
+            initial={reduceMotion ? false : { opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
           >
             {options.map((option) => (
               <button
@@ -123,7 +94,7 @@ export default function CustomSelect({
                 type="button"
                 role="option"
                 aria-selected={option.value === value}
-                className={`custom-select-option${option.value === value ? " custom-select-option-selected" : ""}`}
+                className={`custom-select-option${option.value === value ? " custom-select-option-active" : ""}`}
                 onClick={() => {
                   onChange(option.value);
                   setOpen(false);

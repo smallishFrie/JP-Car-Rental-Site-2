@@ -1,63 +1,58 @@
+"use client";
+
 import Link from "next/link";
-import type { User } from "@supabase/supabase-js";
-import { signOut } from "@/app/auth/actions";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
-import { createClient } from "@/lib/supabase/server";
+import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useState } from "react";
 
-export default async function SiteHeader() {
-  let user: User | null = null;
+export default function SiteHeader() {
+  const [visible, setVisible] = useState(false);
+  const reduceMotion = useReducedMotion();
 
-  if (hasSupabaseEnv()) {
-    const supabase = await createClient();
-    const response = await supabase.auth.getUser();
-    user = response.data.user;
-  }
-
-  const role = user?.app_metadata?.role;
-  const isAdmin = role === "admin";
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > 70);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
-    <header className="site-header">
+    <motion.header
+      className={`site-header${visible ? " site-header-scrolled" : " site-header-hidden"}`}
+      initial={false}
+      animate={
+        reduceMotion
+          ? { y: visible ? 0 : -120, opacity: visible ? 1 : 0 }
+          : {
+              y: visible ? 0 : -120,
+              opacity: visible ? 1 : 0,
+              transition: {
+                duration: visible ? 0.62 : 0.35,
+                ease: [0.22, 1, 0.36, 1],
+              },
+            }
+      }
+    >
       <div className="site-header-inner">
-        <Link href="/" className="site-header-brand">
-          <span className="site-header-badge" aria-hidden="true">
-            JP
-          </span>
-          <h1 className="site-header-title">JP Car Rental</h1>
-        </Link>
-
-        <nav aria-label="User navigation" className="header-auth-nav">
-          <Link href="/#cars" className="header-auth-link">
-            Vehicles
+        <div className="site-header-left">
+          <Link href="/" className="site-brand">
+            JP Car Rental
           </Link>
-          {user ? (
-            <>
-              <Link href="/account/bookings" className="header-auth-link">
-                Trips
-              </Link>
-              {isAdmin ? (
-                <Link href="/admin" className="header-auth-link">
-                  Admin
-                </Link>
-              ) : null}
-              <form action={signOut}>
-                <button type="submit" className="header-auth-button">
-                  Sign out
-                </button>
-              </form>
-            </>
-          ) : (
-            <>
-              <Link href="/auth/sign-in" className="header-auth-link">
-                Sign in
-              </Link>
-              <Link href="/auth/create-account" className="header-auth-button header-auth-cta">
-                Create account
-              </Link>
-            </>
-          )}
+        </div>
+
+        <nav className="site-nav site-nav-centered" aria-label="Primary">
+          <Link href="/">Home</Link>
+          <Link href="/#cars">Fleet</Link>
+          <Link href="/terms">Terms</Link>
         </nav>
+
+        <div className="site-auth-links site-header-right">
+          <Link href="/admin">Admin</Link>
+          <Link href="/auth/sign-in">Sign in</Link>
+          <Link href="/auth/create-account" className="site-vip-link">
+            Create account
+          </Link>
+        </div>
       </div>
-    </header>
+    </motion.header>
   );
 }

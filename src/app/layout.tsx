@@ -1,27 +1,34 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import AppMotionShell from "@/app/components/AppMotionShell";
+import { Inter, Space_Grotesk } from "next/font/google";
+import LayoutChrome from "./components/LayoutChrome";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+const bodyFont = Inter({
+  variable: "--font-body",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const displayFont = Space_Grotesk({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
   title: {
-    default: "JP Car Rental | Minimal Modern Booking",
-    template: "%s | JP Car Rental",
+    default: "JP Car Rental",
+    template: "%s · JP Car Rental",
   },
   description:
-    "Minimal-modern car rental booking with transparent pricing, streamlined checkout, and clear trip management.",
+    "Book a premium rental car in minutes. Cinematic browsing, clear rates, and confident pickup scheduling.",
   openGraph: {
     title: "JP Car Rental",
     description:
-      "Smart and modern car rental booking with clear pricing and flexible pickup.",
-    siteName: "JP Car Rental",
+      "Premium car rental experience with bold editorial design and frictionless booking.",
     type: "website",
+    siteName: "JP Car Rental",
   },
 };
 
@@ -31,9 +38,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="app-body flex min-h-full flex-col">
-        <AppMotionShell>{children}</AppMotionShell>
+    <html
+      lang="en"
+      className={`${bodyFont.variable} ${displayFont.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col">
+        <LayoutChrome>{children}</LayoutChrome>
       </body>
     </html>
   );

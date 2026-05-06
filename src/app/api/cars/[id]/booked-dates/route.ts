@@ -24,10 +24,9 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
   }
 
   const ranges: BookedRange[] = (data ?? []).map((row) => ({
-    startDate: String((row as any).start_date),
-    endDate: String((row as any).end_date),
+    startDate: String((row as { start_date: string }).start_date),
+    endDate: String((row as { end_date: string }).end_date),
   }));
 
   return NextResponse.json({ ranges });
 }
-

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { BookingRecord, RefundStatus } from "@/lib/booking-model";
 import { formatBookingVehicleName } from "@/lib/booking-model";
@@ -19,22 +19,13 @@ const filterLabels: Record<(typeof filterStatuses)[number], string> = {
 };
 
 function deriveStatus(booking: BookingWithCar): (typeof filterStatuses)[number] | "completed" {
-  if (booking.status === "canceled") {
-    return "canceled";
-  }
-  if (booking.status === "cancel_requested") {
-    return "cancel_requested";
-  }
-  if (booking.payment_status !== "paid") {
-    return "pending";
-  }
+  if (booking.status === "canceled") return "canceled";
+  if (booking.status === "cancel_requested") return "cancel_requested";
+  if (booking.payment_status !== "paid") return "pending";
+
   const today = new Date().toISOString().slice(0, 10);
-  if (today < booking.start_date) {
-    return "upcoming";
-  }
-  if (today > booking.end_date) {
-    return "completed";
-  }
+  if (today < booking.start_date) return "upcoming";
+  if (today > booking.end_date) return "completed";
   return "active";
 }
 
@@ -52,14 +43,14 @@ const pipelineStatusLabels: Record<string, string> = {
 };
 
 function formatPipelineStatus(booking: BookingWithCar) {
-  const s = deriveStatus(booking);
-  return pipelineStatusLabels[s] ?? s;
+  const status = deriveStatus(booking);
+  return pipelineStatusLabels[status] ?? status;
 }
 
 function effectiveRefundStatus(booking: BookingWithCar): RefundStatus {
-  const s = booking.refund_status;
-  if (s === "pending" || s === "succeeded" || s === "failed" || s === "not_applicable") {
-    return s;
+  const status = booking.refund_status;
+  if (status === "pending" || status === "succeeded" || status === "failed" || status === "not_applicable") {
+    return status;
   }
   return "none";
 }
@@ -67,27 +58,23 @@ function effectiveRefundStatus(booking: BookingWithCar): RefundStatus {
 function refundStatusLabel(status: RefundStatus): string {
   switch (status) {
     case "pending":
-      return "Refund pending (awaiting Xendit confirmation)";
+      return "Refund pending";
     case "succeeded":
       return "Refund succeeded";
     case "failed":
       return "Refund failed";
     case "not_applicable":
-      return "No refund via Xendit for this cancellation";
+      return "No refund for this cancellation";
     default:
-      return "—";
+      return "-";
   }
 }
 
-/** Suggested full refund when paid and pickup is more than 48 hours away. */
 function suggestedRefundPhp(booking: BookingWithCar): number {
-  if (booking.payment_status !== "paid" || !booking.payment_reference) {
-    return 0;
-  }
+  if (booking.payment_status !== "paid" || !booking.payment_reference) return 0;
+
   const start = new Date(`${booking.start_date}T00:00:00.000Z`).getTime();
-  if (Number.isNaN(start)) {
-    return 0;
-  }
+  if (Number.isNaN(start)) return 0;
   return start - Date.now() > 48 * 60 * 60 * 1000 ? Number(booking.total_price) : 0;
 }
 
@@ -100,16 +87,10 @@ function CancellationConfirmPanel(props: {
   const defaultAmount = suggestedRefundPhp(booking);
   const [amountStr, setAmountStr] = useState(() => String(defaultAmount));
 
-  useEffect(() => {
-    setAmountStr(String(suggestedRefundPhp(booking)));
-  }, [booking.id, booking.start_date, booking.total_price, booking.payment_status, booking.payment_reference]);
-
   return (
     <div className="admin-delete-confirm">
       <p>
-        Refunds are requested through Xendit when you enter a refund amount greater than zero. Final status updates when
-        Xendit sends a webhook (<strong>refund.succeeded</strong> or <strong>refund.failed</strong>). Check{" "}
-        <strong>Refund status</strong> below.
+        Enter a refund amount if needed, then confirm cancellation. Set to <strong>0</strong> if no refund applies.
       </p>
       {booking.cancellation_reason ? (
         <p>
@@ -123,15 +104,11 @@ function CancellationConfirmPanel(props: {
           min={0}
           step={0.01}
           value={amountStr}
-          onChange={(e) => setAmountStr(e.target.value)}
+          onChange={(event) => setAmountStr(event.target.value)}
           disabled={disabled}
           aria-label="Refund amount in PHP"
         />
       </label>
-      <p className="admin-empty" style={{ marginTop: 8 }}>
-        Default is full price only if pickup is more than 48 hours away; you may set a partial refund or 0 if no Xendit
-        refund applies.
-      </p>
       <button
         type="button"
         className="admin-danger-button"
@@ -139,9 +116,7 @@ function CancellationConfirmPanel(props: {
         onClick={() => {
           const parsed = Number(String(amountStr).trim());
           const amount = Number.isFinite(parsed) ? Number(parsed.toFixed(2)) : NaN;
-          if (!Number.isFinite(amount) || amount < 0) {
-            return;
-          }
+          if (!Number.isFinite(amount) || amount < 0) return;
           onConfirm(booking.id, amount);
         }}
       >
@@ -153,33 +128,22 @@ function CancellationConfirmPanel(props: {
 
 export default function AdminBookingManager({ initialBookings }: { initialBookings: BookingWithCar[] }) {
   const router = useRouter();
-  const [bookings, setBookings] = useState(initialBookings);
   const [selectedStatus, setSelectedStatus] = useState<(typeof filterStatuses)[number]>("pending");
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
-  const pendingRefreshAck = useRef(false);
-
-  useEffect(() => {
-    setBookings(initialBookings);
-    if (pendingRefreshAck.current) {
-      pendingRefreshAck.current = false;
-      setMessage("Bookings refreshed.");
-    }
-  }, [initialBookings]);
 
   const filteredBookings = useMemo(
     () =>
-      bookings
+      initialBookings
         .filter((booking) => deriveStatus(booking) === selectedStatus)
         .sort((a, b) => a.start_date.localeCompare(b.start_date)),
-    [bookings, selectedStatus],
+    [initialBookings, selectedStatus],
   );
 
   function refreshAllBookings() {
-    pendingRefreshAck.current = true;
     startTransition(() => {
       router.refresh();
-      setMessage("Refreshing bookings…");
+      setMessage("Refreshing bookings...");
     });
   }
 
@@ -187,20 +151,8 @@ export default function AdminBookingManager({ initialBookings }: { initialBookin
     startTransition(async () => {
       try {
         const result = await cleanupExpiredSessionsAction();
-        const canceledIdSet = new Set(result.canceledIds);
-        setBookings((current) =>
-          current.map((booking) =>
-            canceledIdSet.has(booking.id)
-              ? {
-                  ...booking,
-                  status: "canceled",
-                  canceled_at: new Date().toISOString(),
-                  refund_status: "not_applicable",
-                }
-              : booking,
-          ),
-        );
         setMessage(`Expired session cleanup finished. ${result.cleaned} booking(s) released.`);
+        router.refresh();
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Failed to clean up expired sessions.");
       }
@@ -214,19 +166,6 @@ export default function AdminBookingManager({ initialBookings }: { initialBookin
         fd.set("id", id);
         fd.set("refundAmountPhp", String(refundAmountPhp));
         await confirmCancellationAction(fd);
-        setBookings((current) =>
-          current.map((booking) =>
-            booking.id === id
-              ? {
-                  ...booking,
-                  status: "canceled",
-                  canceled_at: new Date().toISOString(),
-                  refund_amount_php: refundAmountPhp,
-                  refund_status: refundAmountPhp > 0 && booking.payment_status === "paid" ? "pending" : "not_applicable",
-                }
-              : booking,
-          ),
-        );
         setMessage("Cancellation confirmed.");
         router.refresh();
       } catch (error) {
@@ -266,7 +205,7 @@ export default function AdminBookingManager({ initialBookings }: { initialBookin
         {filteredBookings.length ? (
           <div className="booking-detail-grid">
             {filteredBookings.map((booking) => {
-              const rs = effectiveRefundStatus(booking);
+              const refundStatus = effectiveRefundStatus(booking);
               return (
                 <article key={booking.id} className="booking-admin-item">
                   <p>
@@ -297,12 +236,9 @@ export default function AdminBookingManager({ initialBookings }: { initialBookin
                   ) : null}
                   {(selectedStatus === "cancel_requested" || selectedStatus === "canceled") && (
                     <p>
-                      <strong>Refund status:</strong> {refundStatusLabel(rs)}
+                      <strong>Refund status:</strong> {refundStatusLabel(refundStatus)}
                       {booking.refund_amount_php != null && booking.refund_amount_php > 0 ? (
-                        <span>
-                          {" "}
-                          (amount: {Number(booking.refund_amount_php).toFixed(2)} PHP)
-                        </span>
+                        <span> (amount: {Number(booking.refund_amount_php).toFixed(2)} PHP)</span>
                       ) : null}
                     </p>
                   )}

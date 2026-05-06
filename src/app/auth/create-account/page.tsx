@@ -1,22 +1,13 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { signUpWithEmail } from "@/app/auth/actions";
-import AuthShellMotion from "@/app/components/AuthShellMotion";
-import PasswordInput from "@/app/components/PasswordInput";
-import { MotionPressableButton } from "@/app/components/MotionPressable";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
+import AuthFormCard from "@/app/components/AuthFormCard";
 import { createClient } from "@/lib/supabase/server";
+import { hasSupabaseEnv } from "@/lib/supabase/env";
 
 type CreateAccountPageProps = {
-  searchParams: Promise<{
-    message?: string;
-    returnTo?: string;
-  }>;
+  searchParams: Promise<{ message?: string; returnTo?: string }>;
 };
 
-export default async function CreateAccountPage({
-  searchParams,
-}: CreateAccountPageProps) {
+export default async function CreateAccountPage({ searchParams }: CreateAccountPageProps) {
   const { message, returnTo } = await searchParams;
   const safeReturnTo = returnTo?.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/";
 
@@ -25,52 +16,12 @@ export default async function CreateAccountPage({
     const {
       data: { user },
     } = await supabase.auth.getUser();
-
-    if (user) {
-      redirect("/");
-    }
+    if (user) redirect(safeReturnTo);
   }
 
   return (
-    <main className="auth-main auth-main--no-site-header">
-      <section className="auth-shell">
-        <AuthShellMotion>
-          <header className="auth-header">
-            <h1>Create account</h1>
-            <p>Create an account once and manage every trip from one place.</p>
-          </header>
-
-          {message ? <p className="auth-message">{message}</p> : null}
-
-          <form action={signUpWithEmail} className="auth-form">
-            <input type="hidden" name="returnPath" value="/auth/create-account" />
-            <h2>Create account</h2>
-            <label>
-              Email
-              <input type="email" name="email" required />
-            </label>
-            <PasswordInput label="Password" name="password" required minLength={6} autoComplete="new-password" />
-            <PasswordInput
-              label="Confirm password"
-              name="confirmPassword"
-              required
-              minLength={6}
-              autoComplete="new-password"
-            />
-            <MotionPressableButton type="submit" className="auth-primary">
-              Create account
-            </MotionPressableButton>
-          </form>
-
-          <p className="auth-back-link">
-            <Link href="/">← Back to home</Link>
-          </p>
-          <p className="auth-back-link">
-            Already have an account?{" "}
-            <Link href={`/auth/sign-in?returnTo=${encodeURIComponent(safeReturnTo)}`}>→ Sign in</Link>
-          </p>
-        </AuthShellMotion>
-      </section>
-    </main>
+    <section className="auth-route-shell">
+      <AuthFormCard mode="create-account" message={message} safeReturnTo={safeReturnTo} />
+    </section>
   );
 }

@@ -1,22 +1,24 @@
-// Simple in-memory rate limiter for server actions.
-// Note: This only works within a single server instance.
-// For production with multiple instances, use Redis (e.g., Upstash).
+type Entry = {
+  count: number;
+  resetAt: number;
+};
 
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const memoryStore = new Map<string, Entry>();
 
-export function rateLimit(key: string, limit: number, windowMs: number) {
+export function rateLimit(key: string, max: number, windowMs: number) {
   const now = Date.now();
-  const record = rateLimitMap.get(key);
+  const existing = memoryStore.get(key);
 
-  if (!record || now > record.resetTime) {
-    rateLimitMap.set(key, { count: 1, resetTime: now + windowMs });
-    return { ok: true };
+  if (!existing || existing.resetAt <= now) {
+    memoryStore.set(key, { count: 1, resetAt: now + windowMs });
+    return { ok: true, remaining: max - 1 };
   }
 
-  if (record.count >= limit) {
-    return { ok: false };
+  if (existing.count >= max) {
+    return { ok: false, remaining: 0, resetAt: existing.resetAt };
   }
 
-  record.count += 1;
-  return { ok: true };
+  existing.count += 1;
+  memoryStore.set(key, existing);
+  return { ok: true, remaining: Math.max(0, max - existing.count) };
 }

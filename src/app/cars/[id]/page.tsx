@@ -3,11 +3,11 @@ import { notFound } from "next/navigation";
 import CarDetailClient from "@/app/components/CarDetailClient";
 import { getCarById } from "@/lib/cars";
 
-type CarDetailPageProps = {
+type CarPageProps = {
   params: Promise<{ id: string }>;
 };
 
-export default async function CarDetailPage({ params }: CarDetailPageProps) {
+export default async function CarPage({ params }: CarPageProps) {
   const { id } = await params;
   const car = await getCarById(id);
 
@@ -16,13 +16,13 @@ export default async function CarDetailPage({ params }: CarDetailPageProps) {
   }
 
   return (
-    <main className="car-page-main car-page-main--no-site-header">
-      <section className="car-page-shell">
-        <p className="car-page-back">
-          <Link href="/#available-cars-header">← Back to cars</Link>
+    <main className="car-page-main">
+      <div className="car-page-shell">
+        <p className="car-back-link">
+          <Link href="/#cars">Back to fleet</Link>
         </p>
         <CarDetailClient car={car} />
-      </section>
+      </div>
     </main>
   );
 }

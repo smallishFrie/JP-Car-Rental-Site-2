@@ -1,146 +1,58 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { enUS } from "date-fns/locale";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { DayPicker, type DateRange } from "react-day-picker";
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { getCountries, getCountryCallingCode, type CountryCode } from "libphonenumber-js";
 import * as FlagIcons from "country-flag-icons/react/3x2";
-import type { Car } from "@/lib/cars";
-import { categoryTokensWithoutTransmission, parseCategoryTokens } from "@/lib/carDisplay";
-import CarSpecsRow from "@/app/components/CarSpecsRow";
+import type { Car } from "@/app/data/cars";
 import { beginCheckoutAction } from "@/app/cars/[id]/actions";
-import CustomSelect from "@/app/components/CustomSelect";
-import { MotionPressableButton } from "@/app/components/MotionPressable";
-import RevealOnScroll from "@/app/components/RevealOnScroll";
-import { motionSprings } from "@/lib/motion";
-import "react-day-picker/style.css";
+import CarSpecsRow from "./CarSpecsRow";
+import CustomSelect from "./CustomSelect";
 
 type CarDetailClientProps = {
   car: Car;
 };
 
-const AUTOPLAY_MS = 4200;
+const dayRateFormatter = new Intl.NumberFormat("en-PH", {
+  style: "currency",
+  currency: "PHP",
+  maximumFractionDigits: 0,
+});
 
-type BookedRange = { startDate: string; endDate: string };
-
-/** Calendar date as YYYY-MM-DD in the user's local timezone (avoid UTC shift from toISOString). */
-function formatLocalIsoDate(value: Date) {
-  const y = value.getFullYear();
-  const m = String(value.getMonth() + 1).padStart(2, "0");
-  const d = String(value.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-function parseLocalIsoDate(iso: string): Date | undefined {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
-  if (!match) return undefined;
-  const y = Number(match[1]);
-  const mo = Number(match[2]);
-  const day = Number(match[3]);
-  const parsed = new Date(y, mo - 1, day);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
-}
-
-function startOfLocalDay(value: Date) {
-  return new Date(value.getFullYear(), value.getMonth(), value.getDate());
-}
-
-function addDaysLocal(date: Date, days: number) {
-  const next = startOfLocalDay(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function localTodayStart() {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
-
-function dateInRange(date: Date, range: DateRange | undefined): boolean {
-  if (!range?.from || !range?.to) {
-    return false;
-  }
-  const t = startOfLocalDay(date).getTime();
-  const from = startOfLocalDay(range.from).getTime();
-  const to = startOfLocalDay(range.to).getTime();
-  return t >= from && t <= to;
-}
-
-/** True when both dates fall in the same month/year, i.e. rendered in the same calendar grid. */
-function sameMonth(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+function differenceInDaysInclusive(range: DateRange | undefined) {
+  if (!range?.from || !range.to) return 0;
+  const start = new Date(range.from.getFullYear(), range.from.getMonth(), range.from.getDate()).getTime();
+  const end = new Date(range.to.getFullYear(), range.to.getMonth(), range.to.getDate()).getTime();
+  const days = Math.floor((end - start) / 86400000) + 1;
+  return Math.max(0, days);
 }
 
 export default function CarDetailClient({ car }: CarDetailClientProps) {
-  const reduceMotion = useReducedMotion();
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [autoplayTick, setAutoplayTick] = useState(0);
-  const [isZooming, setIsZooming] = useState(false);
-  const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
-  const [rentalDays, setRentalDays] = useState(2);
-  const [location, setLocation] = useState(car.locations[0]?.value ?? "");
-  const [fullName, setFullName] = useState("");
+  const [range, setRange] = useState<DateRange | undefined>();
+  const [pickupLocation, setPickupLocation] = useState("JP Main Office");
+  const [dropoffLocation, setDropoffLocation] = useState("JP Main Office");
+  const [customerName, setCustomerName] = useState("");
   const [phoneCountryIso, setPhoneCountryIso] = useState<CountryCode>("PH");
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [driverLicenseNumber, setDriverLicenseNumber] = useState("");
   const [driverNotes, setDriverNotes] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [bookedRanges, setBookedRanges] = useState<BookedRange[]>([]);
-  const [hoverDay, setHoverDay] = useState<Date | undefined>(undefined);
-  const [calendarOpen, setCalendarOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState("");
-
-  const totalImages = car.images.length;
-
-  const activeSlideLabel = useMemo(
-    () => `Image ${activeImageIndex + 1} of ${totalImages}`,
-    [activeImageIndex, totalImages],
-  );
-  const todayDate = useMemo(() => localTodayStart(), []);
-  const totalPrice = useMemo(() => rentalDays * car.dayRate, [rentalDays, car.dayRate]);
-  const formattedDayRate = useMemo(
-    () => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(car.dayRate),
-    [car.dayRate],
-  );
-  const formattedTotalPrice = useMemo(
-    () => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(totalPrice),
-    [totalPrice],
-  );
-
+  const [bookedRanges, setBookedRanges] = useState<Array<{ from: Date; to: Date }>>([]);
+  const [isPending, startTransition] = useTransition();
+  const today = useMemo(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }, []);
+  const endMonth = useMemo(() => new Date(today.getFullYear() + 1, today.getMonth(), 1), [today]);
+  const galleryImages = useMemo(() => {
+    if (car.images.length > 0) return car.images;
+    return [car.cardImage];
+  }, [car.cardImage, car.images]);
   const phoneCountries = useMemo(() => getCountries(), []);
 
-  const phoneCountryOptions = useMemo(() => {
-    const options = phoneCountries.map((iso) => {
-      const dialCode = `+${getCountryCallingCode(iso)}`;
-      const Flag = (FlagIcons as Record<string, React.ComponentType<{ title?: string; className?: string }>>)[iso];
-      return {
-        value: iso,
-        label: (
-          <span className="phone-country-option">
-            {Flag ? <Flag title={iso} className="phone-country-flag" /> : null}
-            <span className="phone-country-dial">{dialCode}</span>
-          </span>
-        ),
-        sortKey: dialCode,
-      };
-    });
-
-    options.sort((a, b) => a.sortKey.localeCompare(b.sortKey, "en", { sensitivity: "base" }));
-
-    // Pin PH to the top since it's the primary market.
-    const phIndex = options.findIndex((o) => o.value === "PH");
-    if (phIndex > 0) {
-      const [ph] = options.splice(phIndex, 1);
-      options.unshift(ph);
-    }
-
-    return options.map(({ sortKey: _sortKey, ...rest }) => rest);
-  }, [phoneCountries]);
-
+  const days = differenceInDaysInclusive(range);
+  const total = days > 0 ? days * car.dayRate : 0;
   const phoneDialCode = useMemo(() => {
     try {
       return `+${getCountryCallingCode(phoneCountryIso)}`;
@@ -148,539 +60,251 @@ export default function CarDetailClient({ car }: CarDetailClientProps) {
       return "+";
     }
   }, [phoneCountryIso]);
-  const endDate = useMemo(() => {
-    if (!startDate) {
-      return "";
+  const locationOptions = useMemo(
+    () => [
+      { value: "JP Main Office", label: "JP Main Office" },
+      { value: "Airport Terminal", label: "Airport Terminal" },
+      { value: "City Drop Point", label: "City Drop Point" },
+    ],
+    [],
+  );
+  const phoneCountryOptions = useMemo(() => {
+    const options = phoneCountries.map((iso) => {
+      const dialCode = `+${getCountryCallingCode(iso)}`;
+      const Flag = (FlagIcons as Record<string, React.ComponentType<{ title?: string; className?: string }>>)[iso];
+      return {
+        value: iso,
+        sortKey: dialCode,
+        label: (
+          <span className="phone-country-option">
+            {Flag ? <Flag title={iso} className="phone-country-flag" /> : null}
+            <span className="phone-country-dial">{dialCode}</span>
+          </span>
+        ),
+      };
+    });
+    options.sort((a, b) => a.sortKey.localeCompare(b.sortKey, "en", { sensitivity: "base" }));
+    const phIndex = options.findIndex((option) => option.value === "PH");
+    if (phIndex > 0) {
+      const [ph] = options.splice(phIndex, 1);
+      options.unshift(ph);
     }
-    const start = parseLocalIsoDate(startDate);
-    if (!start) {
-      return "";
-    }
-    const end = addDaysLocal(start, Math.max(0, rentalDays - 1));
-    return formatLocalIsoDate(end);
-  }, [startDate, rentalDays]);
+    return options.map((option) => ({
+      value: option.value,
+      label: option.label,
+    }));
+  }, [phoneCountries]);
 
-  const disabledMatchers = useMemo(() => {
-    const ranges: { from: Date; to: Date }[] = bookedRanges
-      .map((range) => {
-        const from = parseLocalIsoDate(range.startDate);
-        const to = parseLocalIsoDate(range.endDate);
-        if (!from || !to) {
-          return null;
-        }
-        return { from, to };
-      })
-      .filter((value): value is { from: Date; to: Date } => value !== null);
-    return [{ before: todayDate }, ...ranges];
-  }, [bookedRanges, todayDate]);
+  const summary = useMemo(() => {
+    if (!range?.from || !range.to) return "Pickup and return dates";
+    return `${range.from.toLocaleDateString()} - ${range.to.toLocaleDateString()}`;
+  }, [range]);
 
-  const isDayDisabled = useCallback(
-    (day: Date) => {
-      const dayStart = startOfLocalDay(day);
-      if (dayStart < todayDate) {
-        return true;
-      }
-      for (const range of bookedRanges) {
-        const from = parseLocalIsoDate(range.startDate);
-        const to = parseLocalIsoDate(range.endDate);
-        if (!from || !to) continue;
-        if (dayStart >= startOfLocalDay(from) && dayStart <= startOfLocalDay(to)) {
-          return true;
-        }
-      }
-      return false;
-    },
-    [bookedRanges, todayDate],
-  );
-
-  const selectedStartDay = useMemo(() => {
-    if (!startDate) return undefined;
-    return parseLocalIsoDate(startDate);
-  }, [startDate]);
-
-  const selectedRange = useMemo<DateRange | undefined>(() => {
-    if (!selectedStartDay) return undefined;
-    const from = startOfLocalDay(selectedStartDay);
-    const to = addDaysLocal(from, Math.max(0, rentalDays - 1));
-    return { from, to };
-  }, [selectedStartDay, rentalDays]);
-
-  const hoverPreviewRange = useMemo<DateRange | undefined>(() => {
-    if (!hoverDay) return undefined;
-    if (isDayDisabled(hoverDay)) return undefined;
-    const from = startOfLocalDay(hoverDay);
-    const to = addDaysLocal(from, Math.max(0, rentalDays - 1));
-    for (let offset = 0; offset < rentalDays; offset += 1) {
-      const candidate = addDaysLocal(from, offset);
-      if (isDayDisabled(candidate)) {
-        return undefined;
-      }
-    }
-    return { from, to };
-  }, [hoverDay, rentalDays, isDayDisabled]);
-
-  const inSelectedRange = useCallback(
-    (date: Date) => dateInRange(date, selectedRange),
-    [selectedRange],
-  );
-
-  /** Effective preview = hover range minus any day already in the committed selection.
-   * Each calendar cell ends up with at most one of `preview` / `selectedrange`,
-   * which keeps the strip-cap CSS unambiguous when the two ranges overlap. */
-  const isPreviewDay = useCallback(
-    (date: Date) => {
-      if (!hoverPreviewRange) return false;
-      if (!dateInRange(date, hoverPreviewRange)) return false;
-      return !inSelectedRange(date);
-    },
-    [hoverPreviewRange, inSelectedRange],
-  );
-
-  /** Single object so strip-join matchers always close over the latest hover/selection (same rules for both strips). */
-  const bookingCalendarModifiers = useMemo(
-    () => ({
-      preview: hoverPreviewRange ? isPreviewDay : undefined,
-      selectedrange: selectedRange ? selectedRange : undefined,
-      /** Cell directly below (same column, next row) is in the same strip. */
-      stripjoindown: (date: Date) => {
-        const d = startOfLocalDay(date);
-        const below = addDaysLocal(d, 7);
-        if (!sameMonth(d, below)) {
-          return false;
-        }
-        return (
-          (isPreviewDay(d) && isPreviewDay(below)) ||
-          (inSelectedRange(d) && inSelectedRange(below))
-        );
-      },
-      /** Cell directly above (same column, previous row) is in the same strip. */
-      stripjoinup: (date: Date) => {
-        const d = startOfLocalDay(date);
-        const above = addDaysLocal(d, -7);
-        if (!sameMonth(d, above)) {
-          return false;
-        }
-        return (
-          (isPreviewDay(d) && isPreviewDay(above)) ||
-          (inSelectedRange(d) && inSelectedRange(above))
-        );
-      },
-    }),
-    [hoverPreviewRange, selectedRange, isPreviewDay, inSelectedRange],
-  );
-
-  const goToNext = () => {
-    setActiveImageIndex((current) => (current + 1) % totalImages);
-    setAutoplayTick((current) => current + 1);
-    setIsZooming(false);
-  };
-
-  const goToPrevious = () => {
-    setActiveImageIndex((current) => (current - 1 + totalImages) % totalImages);
-    setAutoplayTick((current) => current + 1);
-    setIsZooming(false);
-  };
-
-  useEffect(() => {
-    if (totalImages <= 1 || isZooming) {
+  function handleRangeSelect(nextRange: DateRange | undefined, selectedDate?: Date) {
+    if (!selectedDate) {
+      setRange(nextRange);
       return;
     }
-
-    const intervalId = window.setInterval(() => {
-      setActiveImageIndex((current) => (current + 1) % totalImages);
-    }, AUTOPLAY_MS);
-
-    return () => window.clearInterval(intervalId);
-  }, [autoplayTick, totalImages, isZooming]);
+    if (range?.from && range.to && selectedDate > range.from && selectedDate < range.to) {
+      setRange({ from: selectedDate, to: range.to });
+      return;
+    }
+    setRange(nextRange);
+  }
 
   useEffect(() => {
-    let isActive = true;
-    const run = async () => {
+    let active = true;
+    void (async () => {
       try {
         const response = await fetch(`/api/cars/${car.id}/booked-dates`, { cache: "no-store" });
-        if (!response.ok) {
-          return;
-        }
-        const payload = (await response.json()) as { ranges?: BookedRange[] };
-        if (!isActive) {
-          return;
-        }
-        setBookedRanges(payload.ranges ?? []);
+        if (!response.ok) return;
+        const payload = (await response.json()) as { ranges?: Array<{ startDate: string; endDate: string }> };
+        if (!active) return;
+        const ranges = (payload.ranges ?? [])
+          .map((item) => {
+            const from = new Date(item.startDate);
+            const to = new Date(item.endDate);
+            return Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) ? null : { from, to };
+          })
+          .filter((item): item is { from: Date; to: Date } => item !== null);
+        setBookedRanges(ranges);
       } catch {
-        // ignore
+        // Ignore API errors in client booking UI.
       }
-    };
-    run();
+    })();
     return () => {
-      isActive = false;
+      active = false;
     };
   }, [car.id]);
 
-  useEffect(() => {
-    if (!isZooming) {
+  function handleProceed() {
+    if (!range?.from || !range.to || days <= 0) {
+      setFeedback("Please select a valid date range.");
       return;
     }
-
-    const handleWindowMouseUp = () => {
-      setIsZooming(false);
-    };
-
-    window.addEventListener("mouseup", handleWindowMouseUp);
-    return () => {
-      window.removeEventListener("mouseup", handleWindowMouseUp);
-    };
-  }, [isZooming]);
-
-  const bookingDateFieldRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!calendarOpen) {
+    if (!customerName.trim() || !customerPhone.trim() || !driverLicenseNumber.trim()) {
+      setFeedback("Please complete all required booking details.");
       return;
     }
-    const handlePointerDown = (event: PointerEvent) => {
-      const field = bookingDateFieldRef.current;
-      if (field && !field.contains(event.target as Node)) {
-        setCalendarOpen(false);
-      }
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setCalendarOpen(false);
-      }
-    };
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [calendarOpen]);
+    const selectedFrom = range.from;
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setFeedback("");
-    setIsSubmitting(true);
-    try {
-      if (!startDate) {
-        setFeedback("Please select a start date.");
-        return;
-      }
-
-      if (!selectedStartDay || !selectedRange?.to) {
-        setFeedback("Please select a valid start date.");
-        return;
-      }
-
-      for (let offset = 0; offset < rentalDays; offset += 1) {
-        const candidate = addDaysLocal(startOfLocalDay(selectedStartDay), offset);
-        if (isDayDisabled(candidate)) {
-          setFeedback("That range includes unavailable dates. Please choose another start date.");
+    startTransition(() => {
+      void (async () => {
+        const startDate = `${selectedFrom.getFullYear()}-${String(selectedFrom.getMonth() + 1).padStart(2, "0")}-${String(
+          selectedFrom.getDate(),
+        ).padStart(2, "0")}`;
+        const formData = new FormData();
+        formData.set("carId", car.id);
+        formData.set("startDate", startDate);
+        formData.set("rentalDays", String(days));
+        formData.set("customerName", customerName);
+        formData.set("customerPhone", `${phoneDialCode} ${customerPhone}`.trim());
+        formData.set("pickupLocation", pickupLocation);
+        formData.set("driverNotes", `Drop-off: ${dropoffLocation}${driverNotes.trim() ? ` | ${driverNotes.trim()}` : ""}`);
+        formData.set("driverLicenseNumber", driverLicenseNumber);
+        const result = await beginCheckoutAction(formData);
+        if (!result.ok) {
+          setFeedback(result.message);
+          if (result.redirectTo) window.location.href = result.redirectTo;
           return;
         }
-      }
-
-      const formData = new FormData();
-      formData.set("carId", car.id);
-      formData.set("rentalDays", String(rentalDays));
-      formData.set("pickupLocation", location);
-      formData.set("startDate", startDate);
-      formData.set("customerName", fullName);
-      formData.set("customerPhone", `${phoneDialCode} ${phoneNumber}`.trim());
-      formData.set("driverLicenseNumber", driverLicenseNumber);
-      formData.set("driverNotes", driverNotes);
-
-      const result = await beginCheckoutAction(formData);
-      if (!result.ok) {
-        setFeedback(result.message);
-        if (result.redirectTo) {
-          window.location.href = result.redirectTo;
-        }
-        return;
-      }
-
-      window.location.href = result.redirectTo;
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  function handleZoomMove(event: React.MouseEvent<HTMLDivElement>) {
-    if (!isZooming) {
-      return;
-    }
-
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const relativeX = ((event.clientX - bounds.left) / bounds.width) * 100;
-    const relativeY = ((event.clientY - bounds.top) / bounds.height) * 100;
-
-    setZoomPosition({
-      x: Math.max(0, Math.min(100, relativeX)),
-      y: Math.max(0, Math.min(100, relativeY)),
+        window.location.href = result.redirectTo;
+      })();
     });
-  }
-
-  function handleZoomStart(event: React.MouseEvent<HTMLDivElement>) {
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const relativeX = ((event.clientX - bounds.left) / bounds.width) * 100;
-    const relativeY = ((event.clientY - bounds.top) / bounds.height) * 100;
-    setZoomPosition({
-      x: Math.max(0, Math.min(100, relativeX)),
-      y: Math.max(0, Math.min(100, relativeY)),
-    });
-    setIsZooming(true);
-  }
-
-  function handleZoomEnd() {
-    setIsZooming(false);
   }
 
   return (
-    <div className="car-detail-shell">
-      <RevealOnScroll>
-      <section className="car-gallery" aria-label={`${car.name} image gallery`}>
-        <div className="car-gallery-track">
-          {car.images.map((image, index) => (
-            <div
-              key={image}
-              className={`car-gallery-slide ${index === activeImageIndex ? "car-gallery-slide-active" : "car-gallery-slide-inactive"}`}
-              style={{ transform: `translateX(${(index - activeImageIndex) * 100}%)` }}
-              onMouseMove={index === activeImageIndex ? handleZoomMove : undefined}
-              onMouseDown={index === activeImageIndex ? handleZoomStart : undefined}
-              onMouseUp={index === activeImageIndex ? handleZoomEnd : undefined}
-              onMouseLeave={index === activeImageIndex ? handleZoomEnd : undefined}
-            >
-              <Image
-                src={image}
-                alt={`${car.name} placeholder ${index + 1}`}
-                width={1280}
-                height={720}
-                draggable={false}
-                onDragStart={(event) => event.preventDefault()}
-                className={`car-gallery-image ${index === activeImageIndex && isZooming ? "car-gallery-image-zoomed" : ""}`}
-                style={
-                  index === activeImageIndex
-                    ? ({
-                        "--zoom-x": `${zoomPosition.x}%`,
-                        "--zoom-y": `${zoomPosition.y}%`,
-                      } as React.CSSProperties)
-                    : undefined
-                }
-                priority={index === 0}
-              />
+    <div className="car-detail-page">
+      <section className="car-detail-content">
+        <article className="car-detail-main-column">
+          <header className="car-detail-description">
+            <p className="car-detail-eyebrow">Premium selection</p>
+            <h1>{car.name}</h1>
+            <p>{car.tagline}</p>
+            <CarSpecsRow category={car.category} passengerCapacity={car.passengerCapacity} />
+            <p>{car.description}</p>
+            <div className="car-overview-grid">
+              <p>
+                <span>Transmission</span>
+                <strong>{car.category}</strong>
+              </p>
+              <p>
+                <span>Seats</span>
+                <strong>{car.passengerCapacity ?? "N/A"} passengers</strong>
+              </p>
+              <p>
+                <span>Daily rate</span>
+                <strong>{dayRateFormatter.format(car.dayRate)}</strong>
+              </p>
             </div>
-          ))}
-        </div>
+          </header>
 
-        {totalImages > 1 ? (
-          <>
-            <button
-              type="button"
-              className="gallery-nav gallery-nav-left"
-              onClick={goToPrevious}
-              aria-label="Show previous image"
-            >
-              ←
-            </button>
-            <button
-              type="button"
-              className="gallery-nav gallery-nav-right"
-              onClick={goToNext}
-              aria-label="Show next image"
-            >
-              →
-            </button>
-          </>
-        ) : null}
-        <p className="gallery-caption">{activeSlideLabel}</p>
-      </section>
-      </RevealOnScroll>
-
-      <RevealOnScroll>
-      <section className="car-detail-copy">
-        <h1 className="page-intro-fade">{car.name}</h1>
-        <p className="car-detail-tagline">{car.tagline}</p>
-        {categoryTokensWithoutTransmission(parseCategoryTokens(car.category)).length ? (
-          <div className="car-detail-categories" aria-label="Car categories">
-            {categoryTokensWithoutTransmission(parseCategoryTokens(car.category)).map((pill) => (
-              <span key={pill} className="car-card-category-pill">
-                {pill}
-              </span>
-            ))}
+          <div className="car-detail-editorial-gallery">
+            <div className="car-detail-gallery-stack" aria-label="Vehicle image gallery">
+              {galleryImages.map((image, index) => (
+                <div key={`${image}-${index}`} className="car-detail-stack-image">
+                  <Image src={image} alt={`${car.name} gallery ${index + 1}`} width={1200} height={760} />
+                </div>
+              ))}
+            </div>
           </div>
-        ) : null}
-        <CarSpecsRow category={car.category} passengerCapacity={car.passengerCapacity} className="car-detail-specs" />
-        <p>{car.description}</p>
-      </section>
-      </RevealOnScroll>
+        </article>
 
-      <RevealOnScroll>
-      <section className="booking-panel" aria-label="Booking details">
-        <h2>Booking Details</h2>
-        <p className="booking-policy-callout">
-          <strong>Cancellation and refunds:</strong> Cancellations at least 48 hours before pickup may qualify for a full
-          refund; within 48 hours fees may apply. No-shows are non-refundable. Read section 6 in our{" "}
-          <Link href="/terms-of-service#cancellation">Terms of Service</Link>.
-        </p>
-        <form className="booking-form" onSubmit={handleSubmit}>
-          <label>
-            Rental days
-            <input
-              type="number"
-              min={2}
-              value={rentalDays}
-              onChange={(event) => {
-                const parsedDays = Number(event.target.value);
-                if (Number.isNaN(parsedDays)) {
-                  setRentalDays(2);
-                  return;
-                }
-                setRentalDays(Math.max(2, parsedDays));
-              }}
-              required
-            />
-          </label>
+        <aside className="booking-glass-panel" aria-label="Booking panel">
+          <h2>Book this vehicle</h2>
+          <p className="booking-subline">{summary}</p>
 
-          <label>
-            Pickup location
+          <label className="booking-field">
+            <span>Pickup location</span>
             <CustomSelect
-              options={car.locations.map((option) => ({ value: option.value, label: option.label }))}
-              value={location}
-              onChange={setLocation}
+              options={locationOptions}
+              value={pickupLocation}
+              onChange={setPickupLocation}
               optionsAriaLabel="Pickup locations"
+              triggerClassName="booking-field-control"
             />
           </label>
 
-          <div className="booking-date-field" ref={bookingDateFieldRef}>
-            <p className="booking-calendar-label" id="booking-date-label">
-              Pickup dates
-            </p>
-            <button
-              type="button"
-              className="booking-date-trigger"
-              aria-expanded={calendarOpen}
-              aria-haspopup="dialog"
-              aria-controls={calendarOpen ? "booking-date-dialog" : undefined}
-              aria-labelledby="booking-date-label"
-              onClick={() => setCalendarOpen((open) => !open)}
-            >
-              <span>{startDate ? `${startDate} → ${endDate}` : "Select start date & range"}</span>
-              <span className={`booking-date-trigger-chevron${calendarOpen ? " booking-date-trigger-chevron-open" : ""}`} aria-hidden>
-                ▾
-              </span>
-            </button>
-            <AnimatePresence>
-              {calendarOpen ? (
-                <motion.div
-                  layout
-                  key="booking-calendar-panel"
-                  className="booking-calendar-dropdown popover-motion-layer"
-                  id="booking-date-dialog"
-                  role="dialog"
-                  aria-label="Rental calendar"
-                  aria-hidden={false}
-                  initial={{ opacity: 0, y: -8, scale: 0.98, visibility: "hidden" }}
-                  animate={{ opacity: 1, y: 0, scale: 1, visibility: "visible" }}
-                  exit={{ opacity: 0, y: -6, scale: 0.98, visibility: "hidden" }}
-                  transition={reduceMotion ? { duration: 0 } : motionSprings.snappy}
-                  onMouseLeave={() => setHoverDay(undefined)}
-                >
-                  <DayPicker
-                    mode="single"
-                    locale={enUS}
-                    className="booking-daypicker-root"
-                    selected={selectedStartDay}
-                    defaultMonth={selectedStartDay ?? todayDate}
-                    onSelect={(day) => {
-                      setFeedback("");
-                      if (!day) {
-                        setStartDate("");
-                        return;
-                      }
-                      if (isDayDisabled(day)) {
-                        setFeedback("That date is unavailable.");
-                        return;
-                      }
-                      for (let offset = 0; offset < rentalDays; offset += 1) {
-                        const candidate = addDaysLocal(startOfLocalDay(day), offset);
-                        if (isDayDisabled(candidate)) {
-                          setFeedback("That range includes unavailable dates. Please choose another start date.");
-                          return;
-                        }
-                      }
-                      setStartDate(formatLocalIsoDate(day));
-                      setCalendarOpen(false);
-                    }}
-                    disabled={disabledMatchers}
-                    onDayMouseEnter={(d) => setHoverDay(d)}
-                    modifiers={bookingCalendarModifiers}
-                    modifiersClassNames={{
-                      preview: "booking-day-preview",
-                      selectedrange: "booking-day-selectedrange",
-                      stripjoindown: "booking-day-strip-join-down",
-                      stripjoinup: "booking-day-strip-join-up",
-                    }}
-                  />
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
+          <div className="booking-calendar-shell">
+            <DayPicker
+              mode="range"
+              selected={range}
+              onSelect={handleRangeSelect}
+              numberOfMonths={1}
+              captionLayout="label"
+              startMonth={today}
+              endMonth={endMonth}
+              disabled={[{ before: today }, ...bookedRanges]}
+              className="bespoke-daypicker"
+            />
           </div>
 
-          <div className="booking-inline-fields">
-            <label className="booking-full-name-field">
-              Full name
-              <input type="text" value={fullName} onChange={(event) => setFullName(event.target.value)} required />
-            </label>
-          </div>
-
-          <div className="booking-inline-fields">
-            <label>
-              Phone number
-              <div className="booking-phone-input-row">
-                <CustomSelect
-                  options={phoneCountryOptions}
-                  value={phoneCountryIso}
-                  onChange={(value) => {
-                    if ((phoneCountries as readonly string[]).includes(value)) {
-                      setPhoneCountryIso(value as CountryCode);
-                    }
-                  }}
-                  optionsAriaLabel="Phone country code"
-                  className="custom-select--phone-country"
-                />
-                <input type="tel" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} required />
-              </div>
-            </label>
-            <label>
-              Driver license number
-              <input
-                type="text"
-                value={driverLicenseNumber}
-                onChange={(event) => setDriverLicenseNumber(event.target.value)}
-              />
-            </label>
-          </div>
-
-          <label className="booking-notes-field">
-            Driver notes (optional)
-            <input type="text" value={driverNotes} onChange={(event) => setDriverNotes(event.target.value)} />
+          <label className="booking-field">
+            <span>Full name</span>
+            <input value={customerName} onChange={(event) => setCustomerName(event.target.value)} />
           </label>
 
-          <p className="booking-total">
-            {formattedDayRate} per day x {rentalDays} days = <strong>{formattedTotalPrice}</strong>
-          </p>
+          <label className="booking-field">
+            <span>Phone number</span>
+            <div className="booking-phone-input-row">
+              <CustomSelect
+                options={phoneCountryOptions}
+                value={phoneCountryIso}
+                onChange={(value) => {
+                  if ((phoneCountries as readonly string[]).includes(value)) {
+                    setPhoneCountryIso(value as CountryCode);
+                  }
+                }}
+                optionsAriaLabel="Phone country code"
+                className="custom-select--phone-country"
+                triggerClassName="booking-field-control"
+              />
+              <input value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} />
+            </div>
+          </label>
 
-          <MotionPressableButton type="submit" className="booking-submit" disabled={isSubmitting}>
-            {isSubmitting ? "Preparing checkout..." : "Proceed to checkout"}
-          </MotionPressableButton>
-        </form>
+          <label className="booking-field">
+            <span>Drop-off location</span>
+            <CustomSelect
+              options={locationOptions}
+              value={dropoffLocation}
+              onChange={setDropoffLocation}
+              optionsAriaLabel="Drop-off locations"
+              triggerClassName="booking-field-control"
+            />
+          </label>
 
-        {feedback ? (
-          <p className="booking-feedback" role="status">
-            {feedback}
-          </p>
-        ) : null}
+          <label className="booking-field">
+            <span>Driver license no.</span>
+            <input value={driverLicenseNumber} onChange={(event) => setDriverLicenseNumber(event.target.value)} />
+          </label>
+
+          <label className="booking-field">
+            <span>Special requests</span>
+            <textarea value={driverNotes} onChange={(event) => setDriverNotes(event.target.value)} rows={3} />
+          </label>
+
+          <div className="booking-pricing">
+            <p>
+              <span>Daily rate</span>
+              <strong>{dayRateFormatter.format(car.dayRate)}</strong>
+            </p>
+            <p>
+              <span>Selected days</span>
+              <strong>{days || "-"}</strong>
+            </p>
+            <p>
+              <span>Total</span>
+              <strong>{days > 0 ? dayRateFormatter.format(total) : "--"}</strong>
+            </p>
+          </div>
+
+          <button type="button" className="booking-cta" disabled={days === 0 || isPending} onClick={handleProceed}>
+            {isPending ? "Preparing checkout..." : "Proceed to checkout"}
+          </button>
+          {feedback ? <p className="auth-message">{feedback}</p> : null}
+        </aside>
       </section>
-      </RevealOnScroll>
     </div>
   );
 }

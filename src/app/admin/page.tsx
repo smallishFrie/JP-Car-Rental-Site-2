@@ -9,7 +9,7 @@ import { hasSupabaseEnv } from "@/lib/supabase/env";
 
 export default async function AdminPage() {
   if (!hasSupabaseEnv()) {
-    redirect("/auth?message=Supabase environment variables are not configured yet.");
+    redirect("/auth/sign-in?message=Supabase environment variables are not configured.");
   }
 
   try {
@@ -17,7 +17,7 @@ export default async function AdminPage() {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unauthorized";
     if (message === "Please sign in first.") {
-      redirect("/auth?message=Please sign in first.");
+      redirect("/auth/sign-in?returnTo=/admin&message=Please sign in first.");
     }
     redirect("/?message=Unauthorized");
   }
@@ -29,7 +29,7 @@ export default async function AdminPage() {
     bookings = await listBookingsForAdmin();
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load cars.";
-    if (message.includes("Could not find the table") || message.includes("relation") && message.includes("cars")) {
+    if (message.includes("Could not find the table") || (message.includes("relation") && message.includes("cars"))) {
       redirect("/?message=Please run supabase/admin_cars_setup.sql first.");
     }
     throw error;
@@ -52,7 +52,7 @@ export default async function AdminPage() {
   return (
     <main className="auth-main auth-main--no-site-header">
       <section className="auth-shell">
-        <h1 className="admin-page-heading">Operations Console</h1>
+        <h1 className="admin-page-heading">Admin panel</h1>
         <AdminCarManager initialCars={carsWithBookingCounts} />
         <AdminBookingManager initialBookings={bookings} />
         <p className="auth-back-link">

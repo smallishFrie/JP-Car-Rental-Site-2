@@ -1,6 +1,5 @@
 "use client";
 
-import { MotionPressableButton } from "@/app/components/MotionPressable";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import type { CarRecord } from "@/lib/cars";
@@ -60,15 +59,9 @@ export default function AdminCarManager({ initialCars }: AdminCarManagerProps) {
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const selectedCar = useMemo(
-    () => cars.find((car) => car.id === selectedCarId) ?? null,
-    [cars, selectedCarId],
-  );
-
-  /** Bookings that are not completed/canceled (still tied to live inventory). */
+  const selectedCar = useMemo(() => cars.find((car) => car.id === selectedCarId) ?? null, [cars, selectedCarId]);
   const blockingBookingCount = selectedCar?.booking_count ?? 0;
   const canHardDelete = blockingBookingCount === 0;
-
   const isEditMode = Boolean(form.id);
 
   function chooseCar(carId: string) {
@@ -107,9 +100,7 @@ export default function AdminCarManager({ initialCars }: AdminCarManagerProps) {
                   description: formSnapshot.description.trim(),
                   day_rate: Number(formSnapshot.dayRate),
                   passenger_capacity:
-                    formSnapshot.passengerCapacity.trim() === ""
-                      ? null
-                      : Number(formSnapshot.passengerCapacity),
+                    formSnapshot.passengerCapacity.trim() === "" ? null : Number(formSnapshot.passengerCapacity),
                   is_active: formSnapshot.isActive,
                 }
               : car,
@@ -136,9 +127,7 @@ export default function AdminCarManager({ initialCars }: AdminCarManagerProps) {
     startTransition(async () => {
       try {
         await confirmCarTurnoverAction(fd);
-        setCars((currentCars) =>
-          currentCars.map((car) => (car.id === id ? { ...car, pending_turnover: false } : car)),
-        );
+        setCars((currentCars) => currentCars.map((car) => (car.id === id ? { ...car, pending_turnover: false } : car)));
         setMessage("Turnover confirmed — this car is available on the site again.");
         router.refresh();
       } catch (error) {
@@ -211,12 +200,12 @@ export default function AdminCarManager({ initialCars }: AdminCarManagerProps) {
         {selectedCar?.pending_turnover ? (
           <div className="admin-turnover-banner" role="region" aria-label="Turnover confirmation">
             <p>
-              <strong>Turnover required.</strong> This vehicle finished an on-rent period. Confirm turnover before it can
-              appear in the public fleet again.
+              <strong>Turnover required.</strong> This vehicle finished an on-rent period. Confirm turnover before it can appear
+              in the public fleet again.
             </p>
-            <MotionPressableButton type="button" className="auth-primary" disabled={isPending} onClick={handleConfirmTurnover}>
-              {isPending ? "Working…" : "Confirm turnover & return to listing"}
-            </MotionPressableButton>
+            <button type="button" className="auth-primary" disabled={isPending} onClick={handleConfirmTurnover}>
+              {isPending ? "Working..." : "Confirm turnover & return to listing"}
+            </button>
           </div>
         ) : null}
         <form className="admin-form" action={handleSubmit}>
@@ -325,6 +314,7 @@ export default function AdminCarManager({ initialCars }: AdminCarManagerProps) {
               <ul>
                 {form.existingGalleryImages.map((url) => (
                   <li key={url}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={url} alt="Existing slideshow image" loading="lazy" />
                     <div className="admin-existing-images-meta">
                       <span>{url.split("/").pop() ?? "Image file"}</span>
@@ -339,9 +329,9 @@ export default function AdminCarManager({ initialCars }: AdminCarManagerProps) {
             </div>
           ) : null}
 
-          <MotionPressableButton type="submit" className="auth-primary" disabled={isPending}>
+          <button type="submit" className="auth-primary" disabled={isPending}>
             {isPending ? "Saving..." : isEditMode ? "Save changes" : "Create car"}
-          </MotionPressableButton>
+          </button>
           {isEditMode ? (
             !canHardDelete ? (
               <div className="admin-delete-blocked" role="note">
@@ -369,12 +359,7 @@ export default function AdminCarManager({ initialCars }: AdminCarManagerProps) {
                 </div>
               </div>
             ) : (
-              <button
-                type="button"
-                className="admin-danger-button"
-                onClick={() => setIsConfirmingDelete(true)}
-                disabled={isPending}
-              >
+              <button type="button" className="admin-danger-button" onClick={() => setIsConfirmingDelete(true)} disabled={isPending}>
                 Delete car
               </button>
             )

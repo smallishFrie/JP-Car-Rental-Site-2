@@ -1,8 +1,3 @@
-export type CarOption = {
-  value: string;
-  label: string;
-};
-
 export type Car = {
   id: string;
   name: string;
@@ -12,16 +7,8 @@ export type Car = {
   dayRate: number;
   cardImage: string;
   images: string[];
-  locations: CarOption[];
-  /** When set, shown on listings; omit for demo cars without a value. */
   passengerCapacity?: number | null;
 };
-
-const defaultLocations: CarOption[] = [
-  { value: "jp-main-office", label: "JP Main Office" },
-  { value: "airport-terminal", label: "Airport Terminal" },
-  { value: "city-drop-point", label: "City Drop Point" },
-];
 
 export const testCars: Car[] = [
   {
@@ -29,71 +16,43 @@ export const testCars: Car[] = [
     name: "Civic Sport",
     category: "Sedan, Manual",
     passengerCapacity: 5,
-    tagline: "Balanced city comfort and highway efficiency.",
-    description:
-      "A smooth all-rounder with practical luggage room, responsive steering, and excellent fuel economy for everyday travel.",
+    tagline: "Balanced city comfort with sharp highway response.",
+    description: "Balanced city comfort with sharp highway response and practical cabin space.",
     dayRate: 2800,
     cardImage: "/cars/placeholder-01.svg",
-    images: [
-      "/cars/placeholder-01.svg",
-      "/cars/placeholder-02.svg",
-      "/cars/placeholder-03.svg",
-    ],
-    locations: defaultLocations,
+    images: ["/cars/placeholder-01.svg", "/cars/placeholder-02.svg", "/cars/placeholder-03.svg"],
   },
   {
     id: "fortuner-xl",
     name: "Fortuner XL",
     category: "SUV, Automatic",
     passengerCapacity: 7,
-    tagline: "Roomy SUV for family trips and weekend escapes.",
-    description:
-      "Built for comfort over long drives with elevated seating, generous cargo space, and confident road presence.",
+    tagline: "Full-size confidence with long-haul comfort.",
+    description: "A full-size SUV tuned for long-haul comfort, visibility, and luggage flexibility.",
     dayRate: 4500,
     cardImage: "/cars/placeholder-02.svg",
-    images: [
-      "/cars/placeholder-01.svg",
-      "/cars/placeholder-02.svg",
-      "/cars/placeholder-03.svg",
-    ],
-    locations: defaultLocations,
+    images: ["/cars/placeholder-02.svg", "/cars/placeholder-01.svg", "/cars/placeholder-03.svg"],
   },
   {
     id: "vios-prime",
     name: "Vios Prime",
     category: "Sedan, CVT",
     passengerCapacity: 5,
-    tagline: "Compact and easy to drive in busy streets.",
-    description:
-      "Perfect for quick city movement, featuring a quiet cabin and reliable handling for daily commutes and errands.",
+    tagline: "Compact precision made for dense urban driving.",
+    description: "Compact sedan with smooth daily drivability and efficient city-focused performance.",
     dayRate: 2200,
     cardImage: "/cars/placeholder-03.svg",
-    images: [
-      "/cars/placeholder-01.svg",
-      "/cars/placeholder-02.svg",
-      "/cars/placeholder-03.svg",
-    ],
-    locations: defaultLocations,
+    images: ["/cars/placeholder-03.svg", "/cars/placeholder-01.svg", "/cars/placeholder-02.svg"],
   },
   {
     id: "hilux-trail",
     name: "Hilux Trail",
     category: "Pickup, Manual",
     passengerCapacity: 5,
-    tagline: "Tough utility pickup with strong cargo capacity.",
-    description:
-      "A capable choice for mixed work and travel use, offering stable performance and durable construction.",
+    tagline: "Rugged utility with premium control.",
+    description: "Rugged pickup platform with reliable torque delivery and mixed-use utility space.",
     dayRate: 3900,
     cardImage: "/cars/placeholder-01.svg",
-    images: [
-      "/cars/placeholder-01.svg",
-      "/cars/placeholder-02.svg",
-      "/cars/placeholder-03.svg",
-    ],
-    locations: defaultLocations,
+    images: ["/cars/placeholder-01.svg", "/cars/placeholder-03.svg", "/cars/placeholder-02.svg"],
   },
 ];
-
-export function getCarById(carId: string): Car | undefined {
-  return testCars.find((car) => car.id === carId);
-}

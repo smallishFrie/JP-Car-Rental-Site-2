@@ -3,11 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { deleteCarById, requireAdmin, uploadCarImage, upsertCar } from "@/lib/cars";
-import {
-  cleanupExpiredPendingBookings,
-  confirmCancellationForAdmin,
-  syncDerivedStatusForBooking,
-} from "@/lib/bookings";
+import { cleanupExpiredPendingBookings, confirmCancellationForAdmin, syncDerivedStatusForBooking } from "@/lib/bookings";
 
 function parseNumber(value: FormDataEntryValue | null, fieldName: string) {
   const parsed = Number(String(value ?? "").trim());
@@ -20,9 +16,7 @@ function parseNumber(value: FormDataEntryValue | null, fieldName: string) {
 
 function parseOptionalPassengerCapacity(value: FormDataEntryValue | null, fieldName: string) {
   const raw = String(value ?? "").trim();
-  if (raw === "") {
-    return null;
-  }
+  if (raw === "") return null;
 
   const parsed = Number(raw);
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > 55) {
@@ -68,17 +62,13 @@ export async function saveCarAction(formData: FormData) {
     pendingTurnover = Boolean((existingCar as { pending_turnover?: boolean } | null)?.pending_turnover);
   }
 
-  const cardImageUrl = cardImageFile
-    ? await uploadCarImage(cardImageFile, "cards")
-    : existingCardImage;
-
+  const cardImageUrl = cardImageFile ? await uploadCarImage(cardImageFile, "cards") : existingCardImage;
   if (!cardImageUrl) {
     throw new Error("Card image is required.");
   }
 
   const uploadedGalleryUrls = await Promise.all(galleryFiles.map((file) => uploadCarImage(file, "gallery")));
   const galleryImageUrls = [...existingGalleryImages, ...uploadedGalleryUrls];
-
   if (!galleryImageUrls.length) {
     throw new Error("Please provide at least one gallery image.");
   }
@@ -100,20 +90,15 @@ export async function saveCarAction(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath(`/cars/${savedId}`);
-
   return savedId;
 }
 
 export async function deleteCarAction(formData: FormData) {
   await requireAdmin();
-
   const id = String(formData.get("id") ?? "").trim();
-  if (!id) {
-    throw new Error("Car id is required.");
-  }
+  if (!id) throw new Error("Car id is required.");
 
   await deleteCarById(id);
-
   revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath(`/cars/${id}`);
@@ -122,9 +107,8 @@ export async function deleteCarAction(formData: FormData) {
 export async function syncBookingStatusAction(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "").trim();
-  if (!id) {
-    throw new Error("Booking id is required.");
-  }
+  if (!id) throw new Error("Booking id is required.");
+
   await syncDerivedStatusForBooking(id);
   revalidatePath("/admin");
 }
@@ -139,12 +123,10 @@ export async function cleanupExpiredSessionsAction() {
 export async function confirmCancellationAction(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "").trim();
-  if (!id) {
-    throw new Error("Booking id is required.");
-  }
+  if (!id) throw new Error("Booking id is required.");
+
   const rawAmount = formData.get("refundAmountPhp");
-  const refundAmountPhp =
-    rawAmount === null || String(rawAmount).trim() === "" ? 0 : parseNumber(rawAmount, "Refund amount");
+  const refundAmountPhp = rawAmount === null || String(rawAmount).trim() === "" ? 0 : parseNumber(rawAmount, "Refund amount");
   await confirmCancellationForAdmin(id, refundAmountPhp);
   revalidatePath("/admin");
 }
@@ -152,15 +134,11 @@ export async function confirmCancellationAction(formData: FormData) {
 export async function confirmCarTurnoverAction(formData: FormData) {
   await requireAdmin();
   const carId = String(formData.get("carId") ?? "").trim();
-  if (!carId) {
-    throw new Error("Car id is required.");
-  }
+  if (!carId) throw new Error("Car id is required.");
 
   const supabase = await createClient();
   const { error } = await supabase.from("cars").update({ pending_turnover: false }).eq("id", carId);
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   revalidatePath("/");
   revalidatePath("/admin");

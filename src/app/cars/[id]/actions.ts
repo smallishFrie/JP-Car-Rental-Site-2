@@ -1,11 +1,10 @@
 "use server";
 
+import { z } from "zod";
+import { rateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { getCarById } from "@/lib/cars";
 import { checkCarAvailability, createPendingBooking } from "@/lib/bookings";
-import { notifyAdminsPendingBookingCreated } from "@/lib/notifications/booking-admin-events";
-import { rateLimit } from "@/lib/rate-limit";
-import { z } from "zod";
 
 type CheckoutResult =
   | { ok: true; redirectTo: string }
@@ -13,9 +12,7 @@ type CheckoutResult =
 
 function addDaysToIsoDate(dateIso: string, days: number) {
   const parsed = new Date(dateIso);
-  if (Number.isNaN(parsed.getTime())) {
-    throw new Error("Invalid start date.");
-  }
+  if (Number.isNaN(parsed.getTime())) throw new Error("Invalid start date.");
   parsed.setUTCDate(parsed.getUTCDate() + days);
   return parsed.toISOString().slice(0, 10);
 }
@@ -23,9 +20,7 @@ function addDaysToIsoDate(dateIso: string, days: number) {
 export async function beginCheckoutAction(formData: FormData): Promise<CheckoutResult> {
   try {
     const carId = String(formData.get("carId") ?? "").trim();
-    if (!carId) {
-      throw new Error("Car id is required.");
-    }
+    if (!carId) throw new Error("Car id is required.");
 
     const supabase = await createClient();
     const {
@@ -42,47 +37,32 @@ export async function beginCheckoutAction(formData: FormData): Promise<CheckoutR
 
     const limitResult = rateLimit(`beginCheckout:${user.id}`, 5, 60_000);
     if (!limitResult.ok) {
-      return {
-        ok: false,
-        message: "Too many checkout attempts. Please wait a minute and try again.",
-      };
+      return { ok: false, message: "Too many checkout attempts. Please wait a minute and try again." };
     }
 
     const car = await getCarById(carId);
-    if (!car) {
-      throw new Error("Car not found.");
-    }
+    if (!car) throw new Error("Car not found.");
 
     const schema = z.object({
-      startDate: z.string().trim().min(1, "Start date is required."),
-      rentalDays: z.coerce.number().int().min(1, "Rental days must be at least 1."),
-      customerName: z.string().trim().min(1, "Customer name is required."),
-      customerPhone: z.string().trim().min(1, "Customer phone is required."),
-      customerEmail: z
-        .string()
-        .trim()
-        .optional()
-        .transform((value) => (value ? value : undefined))
-        .refine((value) => !value || z.string().email().safeParse(value).success, "Customer email must be valid."),
-      pickupLocation: z.string().trim().min(1, "Pickup location is required."),
-      driverLicenseNumber: z
-        .string()
-        .trim()
-        .optional()
-        .transform((value) => (value ? value : undefined)),
-      driverNotes: z
-        .string()
-        .trim()
-        .optional()
-        .transform((value) => (value ? value : undefined)),
+      startDate: z.string().trim().min(1),
+      rentalDays: z.coerce.number().int().min(1),
+      customerName: z.string().trim().min(1),
+      customerPhone: z.string().trim().min(1),
+      pickupLocation: z.string().trim().min(1),
+      driverLicenseNumber: z.string().trim().min(1, "Driver license number is required."),
+      driverNotes: z.string().trim().optional(),
     });
+
+    const authenticatedEmail = user.email?.trim();
+    if (!authenticatedEmail) {
+      return { ok: false, message: "Unable to verify account email. Please re-authenticate and try again." };
+    }
 
     const parsed = schema.safeParse({
       startDate: formData.get("startDate"),
       rentalDays: formData.get("rentalDays"),
       customerName: formData.get("customerName"),
       customerPhone: formData.get("customerPhone"),
-      customerEmail: user.email ?? formData.get("customerEmail"),
       pickupLocation: formData.get("pickupLocation"),
       driverLicenseNumber: formData.get("driverLicenseNumber"),
       driverNotes: formData.get("driverNotes"),
@@ -92,16 +72,13 @@ export async function beginCheckoutAction(formData: FormData): Promise<CheckoutR
       return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid checkout details." };
     }
 
-    const { startDate, rentalDays, customerName, customerPhone, customerEmail, pickupLocation, driverLicenseNumber, driverNotes } =
-      parsed.data;
+    const { startDate, rentalDays, customerName, customerPhone, pickupLocation, driverLicenseNumber, driverNotes } = parsed.data;
 
     const endDate = addDaysToIsoDate(startDate, Math.max(0, rentalDays - 1));
     const totalPrice = Number((rentalDays * car.dayRate).toFixed(2));
 
     const isAvailable = await checkCarAvailability(carId, startDate, endDate);
-    if (!isAvailable) {
-      return { ok: false, message: "Selected dates are no longer available. Please choose another range." };
-    }
+    if (!isAvailable) return { ok: false, message: "Selected dates are no longer available. Please choose another range." };
 
     const booking = await createPendingBooking({
       userId: user.id,
@@ -112,17 +89,14 @@ export async function beginCheckoutAction(formData: FormData): Promise<CheckoutR
       totalPrice,
       customerName,
       customerPhone,
-      customerEmail,
+      customerEmail: authenticatedEmail,
       pickupLocation,
       driverLicenseNumber,
       driverNotes,
     });
-    void notifyAdminsPendingBookingCreated(booking, car.name).catch(() => undefined);
+
     return { ok: true, redirectTo: `/checkout/${booking.id}` };
   } catch (error) {
-    return {
-      ok: false,
-      message: error instanceof Error ? error.message : "Unable to proceed to checkout.",
-    };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to proceed to checkout." };
   }
 }

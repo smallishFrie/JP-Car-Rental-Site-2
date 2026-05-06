@@ -1,19 +1,12 @@
 import Link from "next/link";
-import RevealOnScroll from "@/app/components/RevealOnScroll";
-import SiteHeader from "@/app/components/SiteHeader";
 
-export default function TermsOfServicePage() {
+export default function TermsPage() {
   return (
-    <>
-      <SiteHeader />
     <main className="legal-page">
       <div className="legal-page-inner">
-        <RevealOnScroll>
-          <h1 className="page-intro-fade">Terms of Service</h1>
-          <p className="legal-meta">Last Updated: May 1, 2026</p>
-        </RevealOnScroll>
+        <h1>Terms of Service</h1>
+        <p className="legal-meta">Last Updated: May 1, 2026</p>
 
-        <RevealOnScroll>
         <section>
           <h2>1. Rental Agreement</h2>
           <p>
@@ -43,9 +36,7 @@ export default function TermsOfServicePage() {
             <li>Outside the agreed-upon geographic limits.</li>
           </ul>
         </section>
-        </RevealOnScroll>
 
-        <RevealOnScroll>
         <section>
           <h2>4. Fuel and Maintenance</h2>
           <p>
@@ -79,15 +70,11 @@ export default function TermsOfServicePage() {
             rate.
           </p>
         </section>
-        </RevealOnScroll>
 
-        <RevealOnScroll>
         <div className="legal-page-footer">
           <Link href="/">&larr; Back to Home</Link>
         </div>
-        </RevealOnScroll>
       </div>
     </main>
-    </>
   );
 }

@@ -1,16 +1,11 @@
 import "server-only";
+
+import { testCars, type Car } from "@/app/data/cars";
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
-import { testCars } from "@/app/data/cars";
 import { BOOKING_STATUSES_BLOCKING_CAR_DELETE } from "@/lib/booking-model";
-import sharp from "sharp";
 
 const CAR_IMAGES_BUCKET = "car-images";
-
-export type CarOption = {
-  value: string;
-  label: string;
-};
 
 export type CarRecord = {
   id: string;
@@ -22,36 +17,12 @@ export type CarRecord = {
   card_image_url: string;
   gallery_image_urls: string[];
   is_active: boolean;
-  /** When true, vehicle is hidden from the public fleet until an admin confirms turnover. */
   pending_turnover?: boolean;
-  passenger_capacity?: number | null;
-  /** Admin only: bookings whose status still requires the car row (not completed/canceled). */
   booking_count?: number;
+  passenger_capacity?: number | null;
 };
-
-export type Car = {
-  id: string;
-  name: string;
-  category: string;
-  tagline: string;
-  description: string;
-  dayRate: number;
-  cardImage: string;
-  images: string[];
-  locations: CarOption[];
-  passengerCapacity: number | null;
-};
-
-export const defaultLocations: CarOption[] = [
-  { value: "jp-main-office", label: "JP Main Office" },
-  { value: "airport-terminal", label: "Airport Terminal" },
-  { value: "city-drop-point", label: "City Drop Point" },
-];
 
 function toAppCar(record: CarRecord): Car {
-  const rawPassenger = record.passenger_capacity;
-  const passengerCapacity = rawPassenger == null ? null : Number(rawPassenger);
-
   return {
     id: record.id,
     name: record.name,
@@ -61,33 +32,16 @@ function toAppCar(record: CarRecord): Car {
     dayRate: Number(record.day_rate),
     cardImage: record.card_image_url,
     images: record.gallery_image_urls?.length ? record.gallery_image_urls : [record.card_image_url],
-    locations: defaultLocations,
-    passengerCapacity:
-      passengerCapacity != null && Number.isFinite(passengerCapacity) && Number.isInteger(passengerCapacity)
-        ? passengerCapacity
-        : null,
+    passengerCapacity: record.passenger_capacity ?? null,
   };
 }
 
-function fallbackCars(): Car[] {
-  return testCars.map((car) => ({
-    id: car.id,
-    name: car.name,
-    category: car.category,
-    tagline: car.tagline,
-    description: car.description,
-    dayRate: car.dayRate,
-    cardImage: car.cardImage,
-    images: car.images,
-    locations: car.locations,
-    passengerCapacity: car.passengerCapacity ?? null,
-  }));
+function fallbackCars() {
+  return testCars;
 }
 
 export async function listCars(): Promise<Car[]> {
-  if (!hasSupabaseEnv()) {
-    return fallbackCars();
-  }
+  if (!hasSupabaseEnv()) return fallbackCars();
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -97,11 +51,8 @@ export async function listCars(): Promise<Car[]> {
     .eq("pending_turnover", false)
     .order("created_at", { ascending: true });
 
-  if (error || !data?.length) {
-    return fallbackCars();
-  }
-
-  return data.map((record) => toAppCar(record as CarRecord));
+  if (error || !data?.length) return fallbackCars();
+  return data.map((row) => toAppCar(row as CarRecord));
 }
 
 export async function getCarById(id: string): Promise<Car | null> {
@@ -121,7 +72,6 @@ export async function getCarById(id: string): Promise<Car | null> {
   if (error || !data) {
     return fallbackCars().find((car) => car.id === id) ?? null;
   }
-
   return toAppCar(data as CarRecord);
 }
 
@@ -136,23 +86,12 @@ function slugifyName(name: string) {
 
 export async function uploadCarImage(file: File, prefix: string): Promise<string> {
   const supabase = await createClient();
-  const path = `${prefix}/${crypto.randomUUID()}.webp`;
+  const path = `${prefix}/${crypto.randomUUID()}-${file.name.replace(/\s+/g, "-").toLowerCase()}`;
   const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
+  const contentType = file.type || "application/octet-stream";
 
-  const resized = await sharp(buffer)
-    .rotate()
-    .resize({
-      width: 1920,
-      height: 1080,
-      fit: "inside",
-      withoutEnlargement: true,
-    })
-    .webp({ quality: 78 })
-    .toBuffer();
-
-  const { error } = await supabase.storage.from(CAR_IMAGES_BUCKET).upload(path, resized, {
-    contentType: "image/webp",
+  const { error } = await supabase.storage.from(CAR_IMAGES_BUCKET).upload(path, bytes, {
+    contentType,
     upsert: false,
   });
 
@@ -179,7 +118,6 @@ export async function upsertCar(input: {
 }): Promise<string> {
   const supabase = await createClient();
   const id = input.id?.trim() || slugifyName(input.name);
-
   const payload = {
     id,
     name: input.name.trim(),
@@ -251,11 +189,10 @@ function storagePathFromPublicUrl(url: string): string | null {
 }
 
 const BOOKING_BLOCK_DELETE_MESSAGE =
-  "This car still has pending, upcoming, active, or cancellation-requested bookings and cannot be permanently deleted. Finish or cancel those first, or uncheck “Available for booking” to hide the car from the site.";
+  "This car still has pending, upcoming, active, or cancellation-requested bookings and cannot be permanently deleted.";
 
 export async function deleteCarById(id: string) {
   const supabase = await createClient();
-
   const { count: blockingBookingCount, error: countError } = await supabase
     .from("bookings")
     .select("id", { count: "exact", head: true })
@@ -275,34 +212,23 @@ export async function deleteCarById(id: string) {
     .select("card_image_url, gallery_image_urls")
     .eq("id", id)
     .maybeSingle();
-
   if (fetchError) {
     throw new Error(fetchError.message);
   }
 
   const { error: deleteError } = await supabase.from("cars").delete().eq("id", id);
   if (deleteError) {
-    const raw = deleteError.message ?? "";
-    if (raw.includes("bookings_car_id_fkey") || raw.includes("foreign key")) {
-      throw new Error(
-        "The database still links every booking row to this car. Run supabase/bookings_car_delete_set_null.sql in the Supabase SQL editor (one-time), then try again—after that, only pending/upcoming/active/cancellation-requested bookings block delete.",
-      );
-    }
     throw new Error(deleteError.message);
   }
 
-  if (!car) {
-    return;
-  }
+  if (!car) return;
 
   const imageUrls = [car.card_image_url, ...(car.gallery_image_urls ?? [])].filter(Boolean);
   const storagePaths = Array.from(
     new Set(imageUrls.map((url) => storagePathFromPublicUrl(url)).filter((path): path is string => Boolean(path))),
   );
 
-  if (!storagePaths.length) {
-    return;
-  }
+  if (!storagePaths.length) return;
 
   const { error: storageError } = await supabase.storage.from(CAR_IMAGES_BUCKET).remove(storagePaths);
   if (storageError) {
