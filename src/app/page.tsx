@@ -1,13 +1,10 @@
 import HeroCopy from "./components/HeroCopy";
-import HeroParallaxBg from "./components/HeroParallaxBg";
 import HomeContactStrip from "./components/HomeContactStrip";
 import HomeCredibilityStrip from "./components/HomeCredibilityStrip";
 import HomeFaq from "./components/HomeFaq";
 import HomeHowItWorks from "./components/HomeHowItWorks";
 import HomeTrustStrip from "./components/HomeTrustStrip";
 import HomeWhatsIncluded from "./components/HomeWhatsIncluded";
-import HomeScrollHeader from "./components/HomeScrollHeader";
-import ScrollHero from "./components/ScrollHero";
 import SiteFooter from "./components/SiteFooter";
 import SiteHeader from "./components/SiteHeader";
 import CarsBrowser from "./components/CarsBrowser";
@@ -18,54 +15,43 @@ export default async function Home() {
   const cars = await listCars();
 
   return (
-    <ScrollHero>
-      <div className="site-shell">
-        <HomeAvailableCarsHashScroll />
-        <HomeScrollHeader>
-          <SiteHeader />
-        </HomeScrollHeader>
-
-        <section className="hero-image-section">
-          <HeroParallaxBg />
-          <div className="hero-image-section-overlay" aria-hidden="true" />
+    <div className="site-shell site-shell-clean-light">
+      <HomeAvailableCarsHashScroll />
+      <SiteHeader />
+      <main className="site-content site-content-clean-light">
+        <section className="hero-image-section hero-image-section-clean-light">
           <HeroCopy />
         </section>
 
-        <main className="site-content">
-          <section className="content-canvas" id="cars" aria-label="Available rental cars">
-            <HomeCredibilityStrip />
-
-            <div className="home-section home-section--prelude">
-              <div className="home-prelude">
-                <HomeTrustStrip />
+        <section className="content-canvas content-canvas-clean-light" id="cars" aria-label="Available rental cars">
+          <div className="home-section home-section--prelude">
+            <div className="home-prelude home-prelude-alt">
+              <HomeCredibilityStrip />
+              <div className="home-prelude-main home-clean-light-two-col">
                 <HomeHowItWorks />
+                <HomeTrustStrip />
               </div>
             </div>
+          </div>
 
-            <div className="home-cars-faq-split" aria-hidden="true" id="available-cars-scroll-mark">
-              <span className="home-cars-faq-split-line" />
-            </div>
+          <div className="home-section home-section--fleet">
+            <CarsBrowser cars={cars} />
+          </div>
 
-            <div className="home-section home-section--fleet">
-              <CarsBrowser cars={cars} />
-            </div>
-
-            <div className="home-cars-faq-split" aria-hidden="true">
-              <span className="home-cars-faq-split-line" />
-            </div>
-
-            <div className="home-section home-section--bottom">
-              <div className="home-bottom-stack">
+          <div className="home-section home-section--bottom">
+            <div className="home-bottom-stack home-bottom-stack-alt">
+              <div className="home-clean-light-two-col">
                 <HomeFaq />
-                <HomeContactStrip />
-                <HomeWhatsIncluded />
+                <div className="home-bottom-rail">
+                  <HomeWhatsIncluded />
+                  <HomeContactStrip />
+                </div>
               </div>
             </div>
-          </section>
-        </main>
-
-        <SiteFooter />
-      </div>
-    </ScrollHero>
+          </div>
+        </section>
+      </main>
+      <SiteFooter />
+    </div>
   );
 }

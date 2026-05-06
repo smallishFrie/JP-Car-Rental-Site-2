@@ -20,14 +20,20 @@ export default async function SiteHeader() {
     <header className="site-header">
       <div className="site-header-inner">
         <Link href="/" className="site-header-brand">
+          <span className="site-header-badge" aria-hidden="true">
+            JP
+          </span>
           <h1 className="site-header-title">JP Car Rental</h1>
         </Link>
 
         <nav aria-label="User navigation" className="header-auth-nav">
+          <Link href="/#cars" className="header-auth-link">
+            Vehicles
+          </Link>
           {user ? (
             <>
               <Link href="/account/bookings" className="header-auth-link">
-                Account
+                Trips
               </Link>
               {isAdmin ? (
                 <Link href="/admin" className="header-auth-link">

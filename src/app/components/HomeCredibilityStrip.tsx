@@ -12,7 +12,10 @@ export default function HomeCredibilityStrip() {
                 <path d="m9 12 2 2 4-4" />
               </svg>
             </span>
-            <span className="home-credibility-label">Book online in minutes</span>
+            <span className="home-credibility-label">
+              <strong>3-step booking</strong>
+              <small>No call required</small>
+            </span>
           </li>
           <li className="home-credibility-item">
             <span className="home-credibility-icon" aria-hidden>
@@ -20,7 +23,10 @@ export default function HomeCredibilityStrip() {
                 <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
               </svg>
             </span>
-            <span className="home-credibility-label">Straightforward PHP rates</span>
+            <span className="home-credibility-label">
+              <strong>PHP pricing</strong>
+              <small>Live totals before checkout</small>
+            </span>
           </li>
           <li className="home-credibility-item">
             <span className="home-credibility-icon" aria-hidden>
@@ -29,7 +35,10 @@ export default function HomeCredibilityStrip() {
                 <circle cx="12" cy="7" r="4" />
               </svg>
             </span>
-            <span className="home-credibility-label">Trips saved to your account</span>
+            <span className="home-credibility-label">
+              <strong>Account timeline</strong>
+              <small>See active + past trips instantly</small>
+            </span>
           </li>
         </ul>
       </RevealOnScroll>

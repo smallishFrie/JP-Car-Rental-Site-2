@@ -11,8 +11,10 @@ import {
 const steps = [
   {
     n: "1",
-    title: "Choose your vehicle and dates",
-    text: "Browse the fleet, open a car you like, and select pickup and return on the calendar.",
+    kicker: "Shortlist",
+    title: "Lock in the right car",
+    text: "Filter by trip style, compare rates quickly, and pick exact pickup/return dates in one flow.",
+    meta: "Usually 2-3 minutes",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
@@ -24,8 +26,10 @@ const steps = [
   },
   {
     n: "2",
-    title: "Confirm your details",
-    text: "Review the rate, location, and trip notes before you head to checkout.",
+    kicker: "Review",
+    title: "Approve trip details",
+    text: "Double-check location, policy notes, and final total before continuing to secure payment.",
+    meta: "No hidden add-ons",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -35,8 +39,10 @@ const steps = [
   },
   {
     n: "3",
-    title: "Pick up and go",
-    text: "Arrive at your chosen location with your booking confirmation and hit the road.",
+    kicker: "Pickup",
+    title: "Show up and drive out",
+    text: "Bring your confirmation and ID, complete handover, then head out with everything documented.",
+    meta: "Confirmation sent instantly",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 12h14" />
@@ -64,8 +70,11 @@ export default function HomeHowItWorks() {
         }}
       >
         <motion.h2 className="home-steps-heading" id="home-steps-heading" variants={item}>
-          How it works
+          From shortlist to steering wheel
         </motion.h2>
+        <motion.p className="home-steps-lede" variants={item}>
+          Built for quick decisions: clear pricing upfront, fewer back-and-forth messages, and a pickup flow that stays predictable.
+        </motion.p>
         <motion.ol className="home-steps-grid" variants={listContainer}>
           {steps.map((step) => (
             <motion.li key={step.n} className="home-step" variants={item}>
@@ -75,8 +84,10 @@ export default function HomeHowItWorks() {
               <div className="home-step-icon" aria-hidden>
                 {step.icon}
               </div>
+              <p className="home-step-kicker">{step.kicker}</p>
               <h3 className="home-step-title">{step.title}</h3>
               <p className="home-step-text">{step.text}</p>
+              <p className="home-step-meta">{step.meta}</p>
             </motion.li>
           ))}
         </motion.ol>

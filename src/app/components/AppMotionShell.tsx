@@ -22,7 +22,7 @@ export default function AppMotionShell({ children }: AppMotionShellProps) {
     <AnimatePresence mode="wait" initial={false}>
       <motion.div
         key={pathname}
-        className="flex min-h-full w-full flex-1 flex-col"
+        className="app-motion-shell flex min-h-full w-full flex-1 flex-col"
         variants={variants}
         initial="initial"
         animate="animate"

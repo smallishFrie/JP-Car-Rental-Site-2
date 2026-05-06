@@ -70,10 +70,10 @@ export default function HomeWhatsIncluded() {
         }}
       >
         <motion.h2 className="home-section-heading" id="home-included-heading" variants={item}>
-          What&apos;s included in the rate
+          What your quote already covers
         </motion.h2>
         <motion.p className="home-included-subline" variants={item}>
-          Four things you get on every quote—then the fine print lives where you book.
+          No filler list. These are the core items shown on every booking summary.
         </motion.p>
 
         <motion.div className="home-included-grid" variants={gridStagger}>

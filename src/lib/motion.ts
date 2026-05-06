@@ -3,35 +3,35 @@ import type { Variants } from "framer-motion";
 /** Shared springs — prefer hardware-friendly props only. */
 export const motionSprings = {
   /** Snappy UI press / hover settle */
-  snappy: { type: "spring" as const, stiffness: 520, damping: 28, mass: 0.85 },
+  snappy: { type: "spring" as const, stiffness: 460, damping: 30, mass: 0.88 },
   /** Section reveals */
-  reveal: { type: "spring" as const, stiffness: 380, damping: 32, mass: 0.9 },
+  reveal: { type: "spring" as const, stiffness: 320, damping: 30, mass: 0.92 },
   /** Dramatic / hero */
-  grand: { type: "spring" as const, stiffness: 280, damping: 30, mass: 1 },
+  grand: { type: "spring" as const, stiffness: 250, damping: 32, mass: 1 },
   /** Soft card tilt follow */
-  tilt: { type: "spring" as const, stiffness: 220, damping: 22, mass: 0.75 },
+  tilt: { type: "spring" as const, stiffness: 180, damping: 24, mass: 0.8 },
 };
 
 export const motionDurations = {
-  page: 0.38,
-  micro: 0.22,
+  page: 0.3,
+  micro: 0.18,
 };
 
-export const motionEase = [0.22, 1, 0.36, 1] as const;
+export const motionEase = [0.2, 0.8, 0.2, 1] as const;
 
 /** Container for staggerChildren lists */
 export const staggerContainerVariants: Variants = {
   hidden: {},
   visible: {
     transition: {
-      staggerChildren: 0.07,
-      delayChildren: 0.06,
+      staggerChildren: 0.05,
+      delayChildren: 0.03,
     },
   },
 };
 
 export const staggerItemFadeUp: Variants = {
-  hidden: { opacity: 0, y: 18 },
+  hidden: { opacity: 0, y: 12 },
   visible: {
     opacity: 1,
     y: 0,
@@ -54,7 +54,7 @@ export const pageShellVariants: Variants = {
   },
   exit: {
     opacity: 0,
-    transition: { duration: 0.28, ease: motionEase },
+    transition: { duration: 0.2, ease: motionEase },
   },
 };
 
@@ -138,14 +138,14 @@ export const revealListContainerVariants: Variants = {
   hidden: {},
   visible: {
     transition: {
-      staggerChildren: 0.09,
-      delayChildren: 0.05,
+      staggerChildren: 0.06,
+      delayChildren: 0.02,
     },
   },
 };
 
 export const revealListItemVariants: Variants = {
-  hidden: { opacity: 0, y: 14 },
+  hidden: { opacity: 0, y: 10 },
   visible: {
     opacity: 1,
     y: 0,

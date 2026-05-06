@@ -23,7 +23,7 @@ export default function CustomSelect({
   options,
   value,
   onChange,
-  placeholder = "Choose…",
+  placeholder = "Select option",
   optionsAriaLabel,
   id,
   className,
@@ -99,7 +99,7 @@ export default function CustomSelect({
           className={`booking-date-trigger-chevron${open ? " booking-date-trigger-chevron-open" : ""}`}
           aria-hidden
         >
-          ▾
+          v
         </span>
       </button>
       <AnimatePresence>

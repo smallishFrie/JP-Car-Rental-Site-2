@@ -35,7 +35,7 @@ export function MotionPressableLink({ className, href, ...rest }: MotionPressabl
       href={href}
       className={className}
       whileHover={reduce ? undefined : { scale: 1.02 }}
-      whileTap={reduce ? undefined : { scale: 0.97 }}
+      whileTap={reduce ? undefined : { scale: 0.985 }}
       transition={motionSprings.snappy}
       {...rest}
     />

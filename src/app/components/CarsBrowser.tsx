@@ -9,7 +9,6 @@ import { categoryTokensWithoutTransmission, parseCategoryTokens } from "@/lib/ca
 import CarSpecsRow from "@/app/components/CarSpecsRow";
 import CustomSelect from "@/app/components/CustomSelect";
 import RevealOnScroll from "@/app/components/RevealOnScroll";
-import TiltSurface from "@/app/components/TiltSurface";
 import { motionSprings } from "@/lib/motion";
 
 const MotionLink = motion(Link);
@@ -18,17 +17,18 @@ const carGridContainerVariants = {
   hidden: {},
   visible: {
     transition: {
-      staggerChildren: 0.055,
-      delayChildren: 0.04,
+      staggerChildren: 0.07,
+      delayChildren: 0.03,
     },
   },
 };
 
 const carCardItemVariants = {
-  hidden: { opacity: 0, y: 14 },
+  hidden: { opacity: 0, y: 16, x: -8 },
   visible: {
     opacity: 1,
     y: 0,
+    x: 0,
     transition: motionSprings.reveal,
   },
 };
@@ -88,26 +88,29 @@ export default function CarsBrowser({ cars }: CarsBrowserProps) {
   }, [cars, search, selectedCategory]);
 
   return (
-    <div className="cars-grid-shell">
+    <div className="fleet-browser">
       <RevealOnScroll className="cars-intro-reveal">
-        <header className="cars-grid-header" id="available-cars-header">
-          <h3>Available Cars</h3>
-          <p>Choose your ride and continue to booking details.</p>
+        <header className="fleet-browser-header" id="available-cars-header">
+          <p className="fleet-browser-kicker">Available now</p>
+          <h3>Find a car in under a minute.</h3>
+          <p>
+            Filter by category, search by model, and compare daily rates quickly without opening multiple pages.
+          </p>
         </header>
 
-        <div className="cars-browser-controls">
+        <div className="fleet-browser-controls">
           <label>
-            Search
+            Search cars
             <input
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search by name, category, or tagline"
+              placeholder="Type vehicle name or keyword"
               aria-label="Search cars"
             />
           </label>
           <label>
-            Filter by category
+            Category
             <CustomSelect
               options={[
                 { value: "all", label: "All categories" },
@@ -122,99 +125,80 @@ export default function CarsBrowser({ cars }: CarsBrowserProps) {
       </RevealOnScroll>
 
       <RevealOnScroll className="cars-grid-reveal">
-        {reduceMotion === true ? (
-          <div className="cars-grid">
-            {filteredCars.map((car) => (
-              <Link
+        <motion.div
+          className="fleet-list"
+          variants={carGridContainerVariants}
+          initial={reduceMotion ? undefined : "hidden"}
+          whileInView={reduceMotion ? undefined : "visible"}
+          viewport={{ once: true, amount: 0.1, margin: "0px 0px -8% 0px" }}
+        >
+          {filteredCars.map((car) => {
+            const categoryTokens = categoryTokensWithoutTransmission(parseCategoryTokens(car.category));
+            const primaryCategory = categoryTokens[0] ?? "Rental";
+
+            return (
+              <MotionLink
                 key={car.id}
                 href={`/cars/${car.id}`}
-                className="car-card"
+                className="fleet-row"
                 aria-labelledby={`car-card-title-${car.id}`}
+                variants={reduceMotion ? undefined : carCardItemVariants}
+                whileHover={reduceMotion ? undefined : { x: 4 }}
+                whileTap={reduceMotion ? undefined : { scale: 0.995 }}
+                transition={motionSprings.snappy}
               >
-                <div className="car-card-image-wrap">
+                <div className="fleet-row-media">
                   <Image
                     src={car.cardImage}
                     alt=""
                     width={1280}
                     height={720}
-                    className="car-card-image"
+                    className="fleet-row-image"
                   />
                 </div>
-                <div className="car-card-body">
-                  <div className="car-card-top">
-                    <div className="car-card-categories" aria-label="Car categories">
-                      {categoryTokensWithoutTransmission(parseCategoryTokens(car.category)).map((category) => (
-                        <span key={`${car.id}-${category}`} className="car-card-category-pill">
+
+                <div className="fleet-row-main">
+                  <div className="fleet-row-main-top">
+                    <div className="fleet-row-title-wrap">
+                      <h4 id={`car-card-title-${car.id}`}>{car.name}</h4>
+                      <p>{car.tagline}</p>
+                    </div>
+
+                    <div className="fleet-row-price" aria-label={`From ${formatDayRate(car.dayRate)} per day`}>
+                      <span className="fleet-row-price-value">{formatDayRate(car.dayRate)}</span>
+                      <span className="fleet-row-price-unit">per day</span>
+                    </div>
+                  </div>
+
+                  <div className="fleet-row-meta">
+                    <span className="fleet-row-category-primary">{primaryCategory}</span>
+                    <div className="fleet-row-categories" aria-label="Car categories">
+                      {categoryTokens.map((category) => (
+                        <span key={`${car.id}-${category}`} className="fleet-row-chip">
                           {category}
                         </span>
                       ))}
                     </div>
-                    <div className="car-card-price" aria-label={`From ${formatDayRate(car.dayRate)} per day`}>
-                      <span className="car-card-price-amount">{formatDayRate(car.dayRate)}</span>
-                      <span className="car-card-price-unit">per day</span>
-                    </div>
                   </div>
-                  <CarSpecsRow category={car.category} passengerCapacity={car.passengerCapacity} className="car-card-specs" />
-                  <h4 id={`car-card-title-${car.id}`}>{car.name}</h4>
-                  <p>{car.tagline}</p>
+
+                  <CarSpecsRow category={car.category} passengerCapacity={car.passengerCapacity} className="fleet-row-specs" />
                 </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <motion.div
-            className="cars-grid"
-            variants={carGridContainerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.08, margin: "0px 0px -10% 0px" }}
-          >
-            {filteredCars.map((car) => (
-              <TiltSurface key={car.id} className="car-card-tilt-wrapper" maxTilt={5}>
-                <MotionLink
-                  href={`/cars/${car.id}`}
-                  className="car-card"
-                  aria-labelledby={`car-card-title-${car.id}`}
-                  variants={carCardItemVariants}
-                  whileHover={reduceMotion ? undefined : { y: -5 }}
-                  whileTap={reduceMotion ? undefined : { scale: 0.99 }}
-                  transition={motionSprings.snappy}
-                >
-                  <div className="car-card-image-wrap">
-                    <Image
-                      src={car.cardImage}
-                      alt=""
-                      width={1280}
-                      height={720}
-                      className="car-card-image"
-                    />
-                  </div>
-                  <div className="car-card-body">
-                    <div className="car-card-top">
-                      <div className="car-card-categories" aria-label="Car categories">
-                        {categoryTokensWithoutTransmission(parseCategoryTokens(car.category)).map((category) => (
-                          <span key={`${car.id}-${category}`} className="car-card-category-pill">
-                            {category}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="car-card-price" aria-label={`From ${formatDayRate(car.dayRate)} per day`}>
-                        <span className="car-card-price-amount">{formatDayRate(car.dayRate)}</span>
-                        <span className="car-card-price-unit">per day</span>
-                      </div>
-                    </div>
-                    <CarSpecsRow category={car.category} passengerCapacity={car.passengerCapacity} className="car-card-specs" />
-                    <h4 id={`car-card-title-${car.id}`}>{car.name}</h4>
-                    <p>{car.tagline}</p>
-                  </div>
-                </MotionLink>
-              </TiltSurface>
-            ))}
-          </motion.div>
-        )}
+
+                <div className="fleet-row-action">
+                  <span className="fleet-row-action-label">View details</span>
+                  <span className="fleet-row-action-arrow" aria-hidden="true">
+                    →
+                  </span>
+                </div>
+              </MotionLink>
+            );
+          })}
+        </motion.div>
       </RevealOnScroll>
 
-      {!filteredCars.length ? <p className="admin-empty">No cars match your current search/filter.</p> : null}
+      {!filteredCars.length ? (
+        <p className="fleet-empty">No vehicles match your current filters. Try a broader search.</p>
+      ) : null}
     </div>
   );
 }

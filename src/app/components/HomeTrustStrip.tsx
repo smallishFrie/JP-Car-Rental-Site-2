@@ -8,7 +8,7 @@ export default function HomeTrustStrip() {
     <section className="home-trust" aria-labelledby="home-trust-heading">
       <RevealOnScroll className="home-trust-reveal">
         <h2 className="home-trust-heading" id="home-trust-heading">
-          Why renters choose JP
+          Why this flow feels easier
         </h2>
         <div className="home-trust-grid">
           <TiltSurface className="home-trust-card-tilt-shell" maxTilt={4}>
@@ -19,8 +19,8 @@ export default function HomeTrustStrip() {
                   <path d="m9 12 2 2 4-4" />
                 </svg>
               </div>
-              <h3 className="home-trust-title">Simple online booking</h3>
-              <p className="home-trust-text">Reserve from your phone or laptop with an account you can return to anytime.</p>
+              <h3 className="home-trust-title">Fast quote-to-book flow</h3>
+              <p className="home-trust-text">Rate, dates, and availability stay visible while you book, so decisions happen faster.</p>
             </article>
           </TiltSurface>
           <TiltSurface className="home-trust-card-tilt-shell" maxTilt={4}>
@@ -31,8 +31,8 @@ export default function HomeTrustStrip() {
                   <circle cx="12" cy="10" r="3" />
                 </svg>
               </div>
-              <h3 className="home-trust-title">Flexible pickup locations</h3>
-              <p className="home-trust-text">Choose the spot that fits your trip—office, airport, or city drop point when you book.</p>
+              <h3 className="home-trust-title">Pickup that matches your route</h3>
+              <p className="home-trust-text">Choose the handover point that makes sense for your day, then confirm it before payment.</p>
             </article>
           </TiltSurface>
           <TiltSurface className="home-trust-card-tilt-shell" maxTilt={4}>
@@ -47,8 +47,8 @@ export default function HomeTrustStrip() {
                   <path d="M3 18h.01" />
                 </svg>
               </div>
-              <h3 className="home-trust-title">Trip history in one place</h3>
-              <p className="home-trust-text">Signed-in customers can review past and upcoming rentals from their account.</p>
+              <h3 className="home-trust-title">Everything in one account</h3>
+              <p className="home-trust-text">Past, upcoming, and active bookings live in one place, including updates and confirmations.</p>
             </article>
           </TiltSurface>
         </div>

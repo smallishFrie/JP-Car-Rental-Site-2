@@ -11,15 +11,15 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "JP Car Rental",
-    template: "%s · JP Car Rental",
+    default: "JP Car Rental | Minimal Modern Booking",
+    template: "%s | JP Car Rental",
   },
   description:
-    "Book a clean vehicle in minutes. JP Car Rental offers simple online booking, flexible pickup locations, and straightforward pricing.",
+    "Minimal-modern car rental booking with transparent pricing, streamlined checkout, and clear trip management.",
   openGraph: {
     title: "JP Car Rental",
     description:
-      "Book a clean vehicle in minutes. Simple online booking and flexible pickup locations.",
+      "Smart and modern car rental booking with clear pricing and flexible pickup.",
     siteName: "JP Car Rental",
     type: "website",
   },
@@ -32,7 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">
+      <body className="app-body flex min-h-full flex-col">
         <AppMotionShell>{children}</AppMotionShell>
       </body>
     </html>

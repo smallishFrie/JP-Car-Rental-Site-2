@@ -52,7 +52,7 @@ export default async function AdminPage() {
   return (
     <main className="auth-main auth-main--no-site-header">
       <section className="auth-shell">
-        <h1 className="admin-page-heading">Admin panel</h1>
+        <h1 className="admin-page-heading">Operations Console</h1>
         <AdminCarManager initialCars={carsWithBookingCounts} />
         <AdminBookingManager initialBookings={bookings} />
         <p className="auth-back-link">

@@ -6,34 +6,34 @@ import RevealOnScroll from "./RevealOnScroll";
 
 const FAQ_ITEMS: { question: string; answer: string }[] = [
   {
-    question: "What do I need to bring at pickup?",
+    question: "What should I bring on pickup day?",
     answer:
-      "A valid driver’s license, a matching ID, and proof of insurance for the rental period. Minimum age and deposit rules are confirmed during checkout.",
+      "Bring your valid driver's license, one matching government ID, and any documents noted in your confirmation. Age and deposit requirements are shown before payment.",
   },
   {
-    question: "How does pricing work?",
+    question: "Is the total shown before I pay?",
     answer:
-      "Rates shown are per day in PHP. Your total updates when you choose pickup and return dates. Taxes or location fees, if any, are summarized before you pay.",
+      "Yes. Rates are displayed in PHP and the trip total recalculates when dates or options change. You approve the same amount you see at checkout.",
   },
   {
-    question: "Can I change or cancel a booking?",
+    question: "Can I edit or cancel after booking?",
     answer:
-      "Use your account to review upcoming trips. Change and cancellation rules depend on the vehicle and dates you selected—see the policy callout on the car page before you confirm.",
+      "Open your account to review the reservation. Change and cancellation windows depend on the selected vehicle and dates, and are shown before you confirm.",
   },
   {
-    question: "Where can I pick up the car?",
+    question: "How are pickup locations selected?",
     answer:
-      "Pickup options depend on the vehicle and availability. You’ll choose or confirm a location as part of booking. Sunday pickups may be by appointment.",
+      "Location options are tied to each car and schedule. You'll select or confirm pickup during booking, and Sunday handovers are arranged by appointment.",
   },
   {
-    question: "How do I pay?",
+    question: "What payment method do you use?",
     answer:
-      "Checkout is handled through our payment partner (Xendit). You’ll complete payment on a secure flow after you confirm trip details.",
+      "Payments are processed through Xendit on an encrypted checkout flow. Card details are never sent over chat or email.",
   },
   {
-    question: "What if I need help after I book?",
+    question: "How do I get support after booking?",
     answer:
-      "Sign in and open Account to see booking status and messages. For urgent pickup-day issues, use the contact details on your confirmation email.",
+      "Use your account to check booking updates and messages. For urgent day-of-trip concerns, follow the direct support details in your confirmation email.",
   },
 ];
 
@@ -58,7 +58,7 @@ export default function HomeFaq() {
     <section className="home-bottom-section home-faq" aria-labelledby="home-faq-heading">
       <RevealOnScroll>
         <h2 className="home-section-heading" id="home-faq-heading">
-          Frequently asked questions
+          Questions people ask before booking
         </h2>
         <div className="home-faq-list">
           {FAQ_ITEMS.map((item, index) => {

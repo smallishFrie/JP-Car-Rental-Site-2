@@ -37,7 +37,7 @@ export default async function CreateAccountPage({
         <AuthShellMotion>
           <header className="auth-header">
             <h1>Create account</h1>
-            <p>Set up your account to start managing bookings.</p>
+            <p>Create an account once and manage every trip from one place.</p>
           </header>
 
           {message ? <p className="auth-message">{message}</p> : null}

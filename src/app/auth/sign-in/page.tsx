@@ -35,7 +35,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         <AuthShellMotion>
           <header className="auth-header">
             <h1>Welcome back</h1>
-            <p>Sign in to manage your bookings.</p>
+            <p>Sign in to view trips, payments, and booking updates.</p>
           </header>
 
           {message ? <p className="auth-message">{message}</p> : null}

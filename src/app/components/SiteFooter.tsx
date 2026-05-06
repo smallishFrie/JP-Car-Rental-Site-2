@@ -17,15 +17,15 @@ export default async function SiteFooter() {
       <div className="site-footer-inner">
         <div className="site-footer-brand">
           <p className="site-footer-title">JP Car Rental</p>
-          <p className="site-footer-tagline">Fast booking. Clean vehicles. Easy travel.</p>
+          <p className="site-footer-tagline">Simple booking, clear rates, and cleaner trip management.</p>
         </div>
 
         <div className="site-footer-columns">
           <div className="site-footer-block">
-            <p className="site-footer-heading">Explore</p>
+            <p className="site-footer-heading">Browse</p>
             <ul className="site-footer-links">
               <li>
-                <Link href="/#cars">Browse vehicles</Link>
+                <Link href="/#cars">Fleet</Link>
               </li>
               {!isSignedIn ? (
                 <li>
@@ -45,19 +45,18 @@ export default async function SiteFooter() {
           </div>
 
           <div className="site-footer-block">
-            <p className="site-footer-heading">Hours &amp; pickup</p>
+            <p className="site-footer-heading">Schedule</p>
             <p className="site-footer-text">
-              Mon–Sat 8:00 a.m.–6:00 p.m. · Sun by appointment. Pickup and return times are confirmed with each
-              booking.
+              Monday to Saturday, 8:00 a.m. to 6:00 p.m. Sunday pickups are available by request and confirmed per booking.
             </p>
           </div>
 
           <div className="site-footer-block">
             <p className="site-footer-heading">Support</p>
             <p className="site-footer-text">
-              Driver&apos;s license and proof of insurance required. Minimum age and deposit terms apply at checkout.
+              Driver&apos;s license and policy requirements are reviewed during checkout before payment confirmation.
             </p>
-            <p className="site-footer-text site-footer-note">Questions about a reservation? Use Account after you sign in.</p>
+            <p className="site-footer-text site-footer-note">Need help with an active booking? Open your account and submit an update request.</p>
           </div>
         </div>
 

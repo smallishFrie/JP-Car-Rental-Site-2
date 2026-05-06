@@ -132,7 +132,7 @@ export default function CheckoutClient(props: {
       <RevealOnScroll className="auth-shell-reveal">
         <header className="auth-header">
           <h1 className="page-intro-fade">Checkout</h1>
-          <p>Complete your payment without leaving JP Car Rental.</p>
+          <p>Review your booking and complete payment in one clean flow.</p>
         </header>
 
         <section className="auth-message" aria-label="Booking summary">
@@ -190,7 +190,7 @@ export default function CheckoutClient(props: {
 
         {message ? <p className="auth-message">{message}</p> : null}
         <p className="admin-empty">
-          Note: some wallets may open an approval step in-app. After payment, we’ll email your confirmation receipt.
+          Some wallets may open a separate approval step. After payment, confirmation is emailed automatically.
         </p>
         </div>
       </RevealOnScroll>

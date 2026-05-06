@@ -4,7 +4,6 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { motionSprings } from "@/lib/motion";
-import { useHeroMotion } from "./hero-motion-context";
 import { MotionPressableLink } from "./MotionPressable";
 import { scrollToAvailableCarsHeader } from "@/lib/scrollToAvailableCars";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
@@ -75,7 +74,6 @@ function SplitWords({ text, reduce }: { text: string; reduce: boolean | null }) 
 
 export default function HeroCopy() {
   const reduce = useReducedMotion();
-  const heroMotion = useHeroMotion();
   const lv = lineItem(reduce);
   const [user, setUser] = useState<User | null | undefined>(() => (hasSupabaseEnv() ? undefined : null));
 
@@ -97,10 +95,10 @@ export default function HeroCopy() {
   const showSignInCta = !hasSupabaseEnv() || user === null;
 
   return (
-    <motion.div className="hero-copy" style={heroMotion ? { y: heroMotion.textY } : undefined}>
+    <motion.div className="hero-copy">
       <motion.div className="hero-copy-inner" variants={heroContainer} initial="hidden" animate="visible">
         <motion.span className="hero-eyebrow" variants={lv}>
-          Drive with confidence
+          JP Car Rental
         </motion.span>
 
         <motion.h2
@@ -110,15 +108,15 @@ export default function HeroCopy() {
             visible: { transition: { staggerChildren: 0.07, delayChildren: 0.06 } },
           }}
         >
-          <SplitWords text="JP Car Rental" reduce={reduce} />
+          <SplitWords text="Reserve smarter. Drive sooner." reduce={reduce} />
         </motion.h2>
 
         <motion.div className="hero-sublines" variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.1, delayChildren: 0.12 } } }}>
           <motion.p className="hero-subline" variants={lv}>
-            Clean cars. Clear rates. Booking that takes minutes.
+            Compare available cars, see clear daily rates, and pick what fits your trip.
           </motion.p>
           <motion.p className="hero-subline" variants={lv}>
-            Pick the dates, choose a location, and you are on your way.
+            Confirm your dates, complete secure checkout, and manage bookings from one account.
           </motion.p>
         </motion.div>
 
@@ -134,7 +132,7 @@ export default function HeroCopy() {
           }}
         >
           <MotionPressableLink href="#cars" className="learn-more-box" onClick={scrollToCars}>
-            Book now
+            Explore fleet
           </MotionPressableLink>
           {showSignInCta ? (
             <MotionPressableLink href="/auth/sign-in" className="hero-cta-secondary">
