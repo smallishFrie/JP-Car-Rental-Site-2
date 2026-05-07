@@ -28,8 +28,23 @@ function differenceInDaysInclusive(range: DateRange | undefined) {
   return Math.max(0, days);
 }
 
+function atMidnight(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function normalizeRange(from: Date, to: Date): DateRange {
+  const start = atMidnight(from);
+  const end = atMidnight(to);
+  return start <= end ? { from: start, to: end } : { from: end, to: start };
+}
+
+type EndpointEdit = "start" | "end" | null;
+
 export default function CarDetailClient({ car }: CarDetailClientProps) {
   const [range, setRange] = useState<DateRange | undefined>();
+  const [pendingEdit, setPendingEdit] = useState<EndpointEdit>(null);
+  const [previewDate, setPreviewDate] = useState<Date | null>(null);
+  const [blockedRangeFeedback, setBlockedRangeFeedback] = useState(false);
   const [pickupLocation, setPickupLocation] = useState("JP Main Office");
   const [dropoffLocation, setDropoffLocation] = useState("JP Main Office");
   const [customerName, setCustomerName] = useState("");
@@ -100,16 +115,136 @@ export default function CarDetailClient({ car }: CarDetailClientProps) {
     return `${range.from.toLocaleDateString()} - ${range.to.toLocaleDateString()}`;
   }, [range]);
 
-  function handleRangeSelect(nextRange: DateRange | undefined, selectedDate?: Date) {
-    if (!selectedDate) {
-      setRange(nextRange);
+  const hasBlockedDatesInRange = (nextRange: DateRange) => {
+    if (!nextRange.from || !nextRange.to) return false;
+    const start = atMidnight(nextRange.from).getTime();
+    const end = atMidnight(nextRange.to).getTime();
+    const dayMs = 86400000;
+    for (let current = start; current <= end; current += dayMs) {
+      const day = new Date(current);
+      if (day < today) return true;
+      const isBooked = bookedRanges.some((booked) => {
+        const from = atMidnight(booked.from).getTime();
+        const to = atMidnight(booked.to).getTime();
+        return current >= from && current <= to;
+      });
+      if (isBooked) return true;
+    }
+    return false;
+  };
+
+  // Range that gets displayed in the calendar. While the user is choosing a
+  // new endpoint, this previews what their final selection would look like as
+  // they hover, without committing it to state until they actually click.
+  const displayedRange = useMemo<DateRange | undefined>(() => {
+    if (!range?.from || !previewDate) return range;
+    if (pendingEdit === "start" && range.to) {
+      return normalizeRange(previewDate, range.to);
+    }
+    if (pendingEdit === "end") {
+      return normalizeRange(range.from, previewDate);
+    }
+    if (!pendingEdit && !range.to) {
+      return normalizeRange(range.from, previewDate);
+    }
+    return range;
+  }, [range, pendingEdit, previewDate]);
+
+  const clearFeedback = () => {
+    setBlockedRangeFeedback(false);
+    if (feedback) setFeedback("");
+  };
+
+  function handleDayClick(day: Date, modifiers: Record<string, boolean | undefined>) {
+    if (modifiers.disabled) return;
+    const target = atMidnight(day);
+    const targetTime = target.getTime();
+    setPreviewDate(null);
+
+    // Adjusting an existing endpoint
+    if (range?.from && range.to && pendingEdit) {
+      const candidate =
+        pendingEdit === "start" ? normalizeRange(target, range.to) : normalizeRange(range.from, target);
+      if (hasBlockedDatesInRange(candidate)) {
+        setBlockedRangeFeedback(true);
+        return;
+      }
+      setRange(candidate);
+      setPendingEdit(null);
+      clearFeedback();
       return;
     }
-    if (range?.from && range.to && selectedDate > range.from && selectedDate < range.to) {
-      setRange({ from: selectedDate, to: range.to });
+
+    // Full range exists, no pending edit yet — clicking start/end arms that endpoint
+    if (range?.from && range.to) {
+      const fromTime = atMidnight(range.from).getTime();
+      const toTime = atMidnight(range.to).getTime();
+      if (targetTime === fromTime) {
+        setPendingEdit("start");
+        clearFeedback();
+        return;
+      }
+      if (targetTime === toTime) {
+        setPendingEdit("end");
+        clearFeedback();
+        return;
+      }
+      // Click outside the existing range — start a fresh selection
+      setRange({ from: target, to: undefined });
+      setPendingEdit(null);
+      clearFeedback();
       return;
     }
-    setRange(nextRange);
+
+    // Building a brand new range
+    if (!range?.from) {
+      setRange({ from: target, to: undefined });
+      clearFeedback();
+      return;
+    }
+
+    // We have `from` but no `to` — close out the range
+    const fromTime = atMidnight(range.from).getTime();
+    if (targetTime === fromTime) {
+      setRange({ from: target, to: target });
+      clearFeedback();
+      return;
+    }
+    const candidate = normalizeRange(range.from, target);
+    if (hasBlockedDatesInRange(candidate)) {
+      setBlockedRangeFeedback(true);
+      return;
+    }
+    setRange(candidate);
+    clearFeedback();
+  }
+
+  function handleDayMouseEnter(day: Date, modifiers: Record<string, boolean | undefined>) {
+    if (modifiers.disabled) {
+      setPreviewDate(null);
+      return;
+    }
+    if (!pendingEdit && range?.from && !range.to) {
+      // Preview the range we'd make if the user clicks this day next.
+      setPreviewDate(atMidnight(day));
+      return;
+    }
+    if (pendingEdit) {
+      setPreviewDate(atMidnight(day));
+      return;
+    }
+    setPreviewDate(null);
+  }
+
+  function handleCalendarMouseLeave() {
+    setPreviewDate(null);
+  }
+
+  function clearSelection() {
+    setRange(undefined);
+    setPendingEdit(null);
+    setPreviewDate(null);
+    setBlockedRangeFeedback(false);
   }
 
   useEffect(() => {
@@ -142,7 +277,7 @@ export default function CarDetailClient({ car }: CarDetailClientProps) {
       setFeedback("Please select a valid date range.");
       return;
     }
-    if (!customerName.trim() || !customerPhone.trim() || !driverLicenseNumber.trim()) {
+    if (!customerName.trim() || !customerPhone.trim()) {
       setFeedback("Please complete all required booking details.");
       return;
     }
@@ -161,7 +296,9 @@ export default function CarDetailClient({ car }: CarDetailClientProps) {
         formData.set("customerPhone", `${phoneDialCode} ${customerPhone}`.trim());
         formData.set("pickupLocation", pickupLocation);
         formData.set("driverNotes", `Drop-off: ${dropoffLocation}${driverNotes.trim() ? ` | ${driverNotes.trim()}` : ""}`);
-        formData.set("driverLicenseNumber", driverLicenseNumber);
+        if (driverLicenseNumber.trim()) {
+          formData.set("driverLicenseNumber", driverLicenseNumber.trim());
+        }
         const result = await beginCheckoutAction(formData);
         if (!result.ok) {
           setFeedback(result.message);
@@ -225,18 +362,53 @@ export default function CarDetailClient({ car }: CarDetailClientProps) {
             />
           </label>
 
-          <div className="booking-calendar-shell">
+          <div
+            className="booking-calendar-shell"
+            onMouseLeave={handleCalendarMouseLeave}
+          >
             <DayPicker
               mode="range"
-              selected={range}
-              onSelect={handleRangeSelect}
+              selected={displayedRange}
+              onSelect={() => {}}
+              onDayClick={handleDayClick}
+              onDayMouseEnter={handleDayMouseEnter}
               numberOfMonths={1}
               captionLayout="label"
               startMonth={today}
               endMonth={endMonth}
               disabled={[{ before: today }, ...bookedRanges]}
-              className="bespoke-daypicker"
+              className={[
+                "bespoke-daypicker",
+                pendingEdit === "start" ? "is-editing-start" : "",
+                pendingEdit === "end" ? "is-editing-end" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
             />
+            <div className="booking-calendar-footer">
+              <p className="booking-calendar-hint" aria-live="polite">
+                {blockedRangeFeedback
+                  ? "That range overlaps unavailable dates. Pick another day."
+                  : pendingEdit === "start"
+                    ? "Click any date to move your pickup."
+                    : pendingEdit === "end"
+                      ? "Click any date to move your return."
+                      : range?.from && !range.to
+                        ? "Now click your return date."
+                        : range?.from && range.to
+                          ? "Click the pickup or return date to move it."
+                          : "Click your pickup date to begin."}
+              </p>
+              {range?.from ? (
+                <button
+                  type="button"
+                  className="booking-calendar-clear"
+                  onClick={clearSelection}
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
           </div>
 
           <label className="booking-field">
@@ -275,7 +447,7 @@ export default function CarDetailClient({ car }: CarDetailClientProps) {
           </label>
 
           <label className="booking-field">
-            <span>Driver license no.</span>
+            <span>Driver license no. (optional)</span>
             <input value={driverLicenseNumber} onChange={(event) => setDriverLicenseNumber(event.target.value)} />
           </label>
 

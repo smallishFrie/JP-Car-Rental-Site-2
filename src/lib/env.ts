@@ -7,3 +7,7 @@ export function readServerEnv(name: string) {
   }
   return value;
 }
+
+export function readOptionalServerEnv(name: string) {
+  return process.env[name] ?? "";
+}

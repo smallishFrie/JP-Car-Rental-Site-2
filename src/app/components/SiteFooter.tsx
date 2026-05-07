@@ -1,6 +1,10 @@
 import Link from "next/link";
 
-export default function SiteFooter() {
+type SiteFooterProps = {
+  signedIn: boolean;
+};
+
+export default function SiteFooter({ signedIn }: SiteFooterProps) {
   return (
     <footer className="site-footer">
       <div className="site-footer-inner">
@@ -19,6 +23,11 @@ export default function SiteFooter() {
               <li>
                 <Link href="/cars/civic-sport">Book</Link>
               </li>
+              {signedIn ? (
+                <li>
+                  <Link href="/account">Account</Link>
+                </li>
+              ) : null}
             </ul>
           </div>
           <div>

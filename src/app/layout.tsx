@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import LayoutChrome from "./components/LayoutChrome";
+import { getSiteHeaderSession } from "@/lib/site-header-session";
 import "./globals.css";
 
 const bodyFont = Inter({
@@ -32,18 +33,20 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headerSession = await getSiteHeaderSession();
+
   return (
     <html
       lang="en"
       className={`${bodyFont.variable} ${displayFont.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <LayoutChrome>{children}</LayoutChrome>
+        <LayoutChrome headerSession={headerSession}>{children}</LayoutChrome>
       </body>
     </html>
   );

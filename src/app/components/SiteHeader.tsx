@@ -4,7 +4,12 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 
-export default function SiteHeader() {
+type SiteHeaderProps = {
+  signedIn: boolean;
+  isAdmin: boolean;
+};
+
+export default function SiteHeader({ signedIn, isAdmin }: SiteHeaderProps) {
   const [visible, setVisible] = useState(false);
   const reduceMotion = useReducedMotion();
 
@@ -43,14 +48,23 @@ export default function SiteHeader() {
           <Link href="/">Home</Link>
           <Link href="/#cars">Fleet</Link>
           <Link href="/terms">Terms</Link>
+          {signedIn ? (
+            <Link href="/account">Account</Link>
+          ) : null}
+          {isAdmin ? (
+            <Link href="/admin">Admin</Link>
+          ) : null}
         </nav>
 
         <div className="site-auth-links site-header-right">
-          <Link href="/admin">Admin</Link>
-          <Link href="/auth/sign-in">Sign in</Link>
-          <Link href="/auth/create-account" className="site-vip-link">
-            Create account
-          </Link>
+          {!signedIn ? (
+            <>
+              <Link href="/auth/sign-in">Sign in</Link>
+              <Link href="/auth/create-account" className="site-vip-link">
+                Create account
+              </Link>
+            </>
+          ) : null}
         </div>
       </div>
     </motion.header>

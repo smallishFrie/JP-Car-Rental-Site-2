@@ -41,10 +41,10 @@ export default function CarsBrowser({ cars }: CarsBrowserProps) {
   }, [cars, search]);
 
   return (
-    <section className="fleet-shell" aria-labelledby="fleet-heading">
+    <section className="fleet-shell" aria-labelledby="available-cars-header">
       <header className="fleet-header">
         <p className="fleet-kicker">Available now</p>
-        <h2 id="fleet-heading">Editorial fleet selection</h2>
+        <h2 id="available-cars-header">Editorial fleet selection</h2>
         <p>Panoramic strips, precise specs, and a direct route into booking.</p>
       </header>
 
